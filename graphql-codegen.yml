@@ -1,0 +1,8 @@
+generates:
+  types-and-hooks.tsx:
+    plugins:
+      - typescript
+      - typescript-operations
+      - typescript-rtk-query:
+          importBaseApiFrom: 'data/gql/gql_api'
+          exportHooks: true

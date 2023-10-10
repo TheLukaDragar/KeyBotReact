@@ -1,0 +1,9 @@
+{
+  "mnemonicPhrase": "sock vibrant token unable anxiety monitor fault matrix swing inhale ski auction pill october effort east kick above odor rule gallery attend hope twin",
+  "keyChainData": {
+    "wallet": "{\"address\":\"a3e7f892e902e1f11a7c885baee65c9a33f26466\",\"id\":\"58691e1f-d411-4c20-a950-4ade35f77b92\",\"version\":3,\"crypto\":{\"cipher\":\"aes-128-ctr\",\"cipherparams\":{\"iv\":\"8b40b933f13ba2095387ddc965904861\"},\"ciphertext\":\"8da6f3172f0a48353cd430420ca5b059e46e9e0edfe31c9bc65978cafb689c93\",\"kdf\":\"scrypt\",\"kdfparams\":{\"salt\":\"52a822b7307422d5d40cc4d99f115baa22db7818f3341f0abe17d723d720abdf\",\"n\":2,\"dklen\":32,\"p\":1,\"r\":8},\"mac\":\"ab757200df483512df9da1e5cbabed15a06b7bdb00d555c8cc304cf97471d54a\"},\"x-ethers\":{\"client\":\"ethers.js\",\"gethFilename\":\"UTC--2023-03-14T15-46-04.0Z--a3e7f892e902e1f11a7c885baee65c9a33f26466\",\"mnemonicCounter\":\"1113c665898fd197ad23e80d9d43e159\",\"mnemonicCiphertext\":\"2f49f85d80de7af5bb57a2ac931b3139eb3c12b00a8acf41d37911f51ed80d38\",\"path\":\"m/44'/60'/0'/0/0\",\"locale\":\"en\",\"version\":\"0.1\"}}",
+    "privateKey": "0xf7540cd87cd2a06371ccd2faa57a95bdb9a4bf136076f400997b9ed6b7a2b88f",
+    "mnemonic": "sock vibrant token unable anxiety monitor fault matrix swing inhale ski auction pill october effort east kick above odor rule gallery attend hope twin",
+    "pin": "1234"
+  }
+}

@@ -1,0 +1,100 @@
+{
+  "expo": {
+    "name": "KeyBot",
+    "slug": "KeyBot",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/icon.png",
+    "scheme": "myapp",
+    "userInterfaceStyle": "automatic",
+    "splash": {
+      "image": "./assets/images/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+    "jsEngine": "hermes",
+    "updates": {
+      "fallbackToCacheTimeout": 0,
+      "url": "https://u.expo.dev/36e1a5d9-7e86-47ef-9c3e-a82fb95e09b4"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.lukadragar.KeyBot",
+      "infoPlist": {
+        "NSBluetoothAlwaysUsageDescription": "Allow $(PRODUCT_NAME) to connect to bluetooth devices",
+        "NSBluetoothPeripheralUsageDescription": "Allow $(PRODUCT_NAME) to connect to bluetooth devices",
+        "NSCameraUsageDescription" : "Allow $(PRODUCT_NAME) to access your camera",
+        "NSPhotoLibraryUsageDescription": "The app accesses your photos to let you share them."
+        
+      },
+      "jsEngine": "jsc",
+      "config": {
+        "googleMapsApiKey": "AIzaSyD4hVREK_akwOfftfk3gqVQfjti-qcreYg" //https://github.com/react-native-maps/react-native-maps/blob/master/docs/installation.md M1 ISSUE SOLVE
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/adaptive-icon.png",
+        "backgroundColor": "#ffffff"
+      },
+      "package": "com.lukadragar.KeyBot",
+      "permissions": [
+        "android.permission.BLUETOOTH",
+        "android.permission.BLUETOOTH_ADMIN",
+        "android.permission.BLUETOOTH_CONNECT"
+      ],
+      "config": {
+        "googleMaps": {
+          "apiKey": "AIzaSyD4hVREK_akwOfftfk3gqVQfjti-qcreYg"
+        }
+      }
+    },
+    "web": {
+      "favicon": "./assets/images/favicon.png"
+    },
+    "plugins": [
+      [
+        "@config-plugins/react-native-ble-plx",
+        {
+          "isBackgroundEnabled": true,
+          "modes": [
+            "peripheral",
+            "central"
+          ],
+          "bluetoothAlwaysPermission": "Allow $(PRODUCT_NAME) to connect to bluetooth devices"
+        }
+      ],
+      [
+        "expo-router",
+        {
+          "asyncRoutes": {
+            "default": "development",
+            "android": false,
+            "ios": false
+          }
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "The app accesses your photos to let you share them."
+        }
+      ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow $(PRODUCT_NAME) to access your camera."
+        }
+      ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "4325a61e-bcf4-430d-afe3-6f7ea52f07f7"
+      }
+    },
+    "runtimeVersion": "1.0.0"
+  }
+}

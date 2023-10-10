@@ -1,0 +1,25 @@
+type Customer {
+  email: String
+ name: String
+}
+type CustomerList {
+  name: ID
+ value: Customer
+}
+
+type Query {
+  """
+  Result typed as JSON since none of its fields is a valid GraphQL identifier ["-N6rOmxa7vOOTpZZSllL", "-N6rQgCkbLPB1xElUchT", "-N6rSJ4xI3_Cq7u58Wh_", "-N6rSZB4AoMAwrDnm2jF", "-N6rTRzW_JrkHQMdt5QA"]
+  """
+  getCustomers: [CustomerList]
+    @rest(
+      endpoint: "https://keybotreact-default-rtdb.europe-west1.firebasedatabase.app/customers.json"
+      transforms: [ { pathpattern: [], editor: "objectToArray" } ]
+    )
+
+  getCustomerById(id: ID!): Customer
+    @rest(
+      endpoint: "https://keybotreact-default-rtdb.europe-west1.firebasedatabase.app/customers/$id.json"
+    )
+  
+}
