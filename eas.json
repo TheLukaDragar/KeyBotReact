@@ -16,7 +16,10 @@
     },
     "preview": {
       "distribution": "internal",
-      "channel": "preview"
+      "channel": "preview",
+      "android": {
+        "credentialsSource": "local"
+      }
     },
     "simulator": {
       "developmentClient": true,

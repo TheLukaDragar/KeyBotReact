@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "KeyBot",
-    "slug": "KeyBot",
+    "slug": "keybotreact",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -26,9 +26,8 @@
       "infoPlist": {
         "NSBluetoothAlwaysUsageDescription": "Allow $(PRODUCT_NAME) to connect to bluetooth devices",
         "NSBluetoothPeripheralUsageDescription": "Allow $(PRODUCT_NAME) to connect to bluetooth devices",
-        "NSCameraUsageDescription" : "Allow $(PRODUCT_NAME) to access your camera",
+        "NSCameraUsageDescription": "Allow $(PRODUCT_NAME) to access your camera",
         "NSPhotoLibraryUsageDescription": "The app accesses your photos to let you share them."
-        
       },
       "jsEngine": "jsc",
       "config": {
@@ -50,12 +49,14 @@
         "googleMaps": {
           "apiKey": "AIzaSyD4hVREK_akwOfftfk3gqVQfjti-qcreYg"
         }
-      }
+      },
+      "googleServicesFile": "./google-services.json"
     },
     "web": {
       "favicon": "./assets/images/favicon.png"
     },
     "plugins": [
+      "@react-native-firebase/app",
       [
         "@config-plugins/react-native-ble-plx",
         {
@@ -87,6 +88,14 @@
         "expo-camera",
         {
           "cameraPermission": "Allow $(PRODUCT_NAME) to access your camera."
+        }
+      ],
+      [
+        "expo-build-properties",
+        {
+          "ios": {
+            "useFrameworks": "static" //from raact-native firebase
+          }
         }
       ]
     ],
