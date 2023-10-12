@@ -22,9 +22,22 @@ export default function Layout() {
         <Stack.Screen name="index"
             options={{
                 title: "Welcome",
-                animation: "none"
+                animation: "none",
+                headerShown: false
 
             }}
+
+
+
+        />
+
+        <Stack.Screen name="(intro)"
+            options={{
+            
+                headerShown: false
+
+            }}
+
 
 
         />
@@ -74,6 +87,6 @@ export default function Layout() {
 
 
         />
-       
+
     </Stack>
 }

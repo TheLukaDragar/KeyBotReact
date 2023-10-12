@@ -32,7 +32,8 @@
       "jsEngine": "jsc",
       "config": {
         "googleMapsApiKey": "AIzaSyD4hVREK_akwOfftfk3gqVQfjti-qcreYg" //https://github.com/react-native-maps/react-native-maps/blob/master/docs/installation.md M1 ISSUE SOLVE
-      }
+      },
+      "googleServicesFile": "./GoogleService-Info.plist"
     },
     "android": {
       "adaptiveIcon": {
@@ -57,6 +58,9 @@
     },
     "plugins": [
       "@react-native-firebase/app",
+      "@react-native-firebase/auth",
+      "@react-native-google-signin/google-signin",
+     
       [
         "@config-plugins/react-native-ble-plx",
         {

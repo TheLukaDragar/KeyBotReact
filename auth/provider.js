@@ -1,8 +1,19 @@
-import { useRouter, useSegments } from "expo-router";
+import { useRouter, useSegments,useRootNavigation } from "expo-router";
 import React from "react";
 import { useAppDispatch, useAppSelector } from '../data/hooks';
 import { UserType2 } from "../constants/Auth";
-const AuthContext = React.createContext(null);
+import auth from '@react-native-firebase/auth';
+import { GoogleSignin } from '@react-native-google-signin/google-signin';
+
+
+
+const AuthContext = React.createContext({
+  signIn: () => {}, //TODO
+  signOut: () => {},
+  user: null,
+  initializing: true,
+});
+
 
 // This hook can be used to access the user info.
 export function useAuth() {
@@ -14,7 +25,29 @@ function useProtectedRoute(user) {
   const segments = useSegments();
   const router = useRouter();
 
+    // checking that navigation is all good;
+    const [isNavigationReady, setNavigationReady] = React.useState(false);
+    const rootNavigation = useRootNavigation();
+
+    React.useEffect(() => {
+      const unsubscribe = rootNavigation?.addListener("state", (event) => {
+        setNavigationReady(true);
+      });
+      return function cleanup() {
+        if (unsubscribe) {
+          unsubscribe();
+        }
+      };
+    }, [rootNavigation]);
+
+  
+
   React.useEffect(() => {
+
+    if (!isNavigationReady) {
+      return;
+    }
+
     const inAuthGroup = segments[0] === "auth";
     const inHome = segments[0] === "home";
     //check if modal or missing
@@ -27,17 +60,14 @@ function useProtectedRoute(user) {
     console.log("inAuthGroup", inAuthGroup);
     //console.log("user", user);
 
-    let is_user = user.userData.token !== null && user.userData.token !== '';
-    let user_type = user.userData.userType;
+    let is_user = user !== null && user.uid !== null && user.uid !== undefined && user.uid !== '';
 
     //if user is not yet retrieved do nothing
-    if (user.userData.token === '') {
+    // if (user === null || user.uid === null || user.uid === undefined || user.uid === '') {
 
-        console.log("token is not returned yet wait");
-
-
-        return;
-    }
+    //     console.log("user not yet retrieved");
+    //     return;
+    // }
 
 
 
@@ -47,41 +77,88 @@ function useProtectedRoute(user) {
       !inAuthGroup
     ) {
       // Redirect to the sign-in page.
-      router.replace("auth");
+      //check if navigation is ready
       console.log("redirect to sign in");
+      //wait for 5 seconds
+
+       router.replace("auth");
+     
     } else if (is_user && !inHome && !inModal) {
       // Redirect away from the sign-in page.
       //router.replace("/home");
 
-      console.log("user type", user_type);
+      console.log("user logged in");
 
       //check user type
-      if (user_type === UserType2.RENTER) {
+     
         router.replace("client");
-      } else if (user_type === UserType2.PARCEL_DELIVERY) {
-        router.replace("courier");
-      }else if (user_type === null || isNaN(user_type)) {
-        router.replace("auth");
-      }
-        console.log("redirect to home");
+    
     }
-  }, [user]); //segemnts
+  }, [user,isNavigationReady]);
 }
 
 export function ProviderAuth(props) {
+  //thype user or null
   const [user, setAuth] = React.useState(null);
+  const [initializing, setInitializing] = React.useState(true);
+
+ 
 
   const secure = useAppSelector((state) => state.secure);
   const dispatch = useAppDispatch();
 
-  useProtectedRoute(secure);
+  useProtectedRoute(user);
+
+
+
+  GoogleSignin.configure({
+    webClientId: '414868164821-d74dqmptkfg7vbc59210aeg7ou7018q0.apps.googleusercontent.com',
+    forceCodeForRefreshToken: true,
+  });
+
+
+  async function onGoogleButtonPress() {
+
+
+    // Check if your device supports Google Play
+    await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
+    // Get the users ID token
+    const { idToken } = await GoogleSignin.signIn();
+  
+    // Create a Google credential with the token
+    const googleCredential = auth.GoogleAuthProvider.credential(idToken);
+    console.log("googleCredential", googleCredential);
+  
+    // Sign-in the user with the credential
+    return auth().signInWithCredential(googleCredential);
+  }
+
+
+  // Handle user state changes
+  function onAuthStateChanged(user) {
+    console.log("onAuthStateChanged", user);
+   
+      setAuth(user);
+      console.log("initializing1", initializing);
+      if (initializing){ setInitializing(false);}
+      console.log("user", user);
+      console.log("initializing", initializing);
+  }
+
+  React.useEffect(() => {
+    const subscriber = auth().onAuthStateChanged(onAuthStateChanged);
+    return subscriber; // unsubscribe on unmount
+  }, []);
+
+
 
   return (
     <AuthContext.Provider
       value={{
-        signIn: () => setAuth({}), //TODO
-        signOut: () => setAuth(null),
+        signIn: () => onGoogleButtonPress(),
+        signOut: () => auth().signOut(),
         user,
+        initializing : initializing,
       }}
     >
       {props.children}

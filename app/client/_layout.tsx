@@ -7,7 +7,7 @@ import { Button, IconButton, Snackbar, TextInput } from 'react-native-paper';
 import { useAppDispatch } from "../../data/hooks";
 import { full_signout } from "../../data/secure";
 import { apiSlice } from "../../data/api";
-
+import { useAuth } from "../../auth/provider";
 /**
  * You can explore the built-in icon families and icons on the web at https://icons.expo.fyi/
  */
@@ -27,6 +27,8 @@ function TabBarIcon2(props: {
 export default function TabLayout() {
   const colorScheme = useColorScheme();
   const dispatch = useAppDispatch();
+  const { signOut } = useAuth();
+
 
 
   return (
@@ -49,8 +51,7 @@ export default function TabLayout() {
           size={25}
           onPress={() => {
 
-            dispatch(full_signout())
-            dispatch(apiSlice.util.resetApiState());
+            signOut();
 
           
           }}
