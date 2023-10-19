@@ -65,6 +65,33 @@ export default function TabLayout() {
         }}
       />
 
+<Tabs.Screen
+        name="cars"
+
+        options={{
+          title: "Cars",
+          tabBarIcon: ({ color }) => <TabBarIcon name="car" color={color} />,
+          headerRight: () => (
+            
+            <IconButton
+          icon="logout"
+          size={25}
+          onPress={() => {
+
+            signOut();
+
+          
+          }}
+        />
+  
+              
+              
+            
+          ),
+
+        }}
+      />
+
       <Tabs.Screen
         name="index"
         // TODO: Type
@@ -73,7 +100,7 @@ export default function TabLayout() {
 
           
           
-          title: "Parcels",
+          title: "Cars",
           tabBarIcon: ({ color  }) => <TabBarIcon2 name="truck-fast" color={color} />,
           headerRight: () => (
             <Link href="/modal" asChild>
