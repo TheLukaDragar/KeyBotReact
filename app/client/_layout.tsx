@@ -76,6 +76,35 @@ export default function TabLayout() {
             <IconButton
           icon="logout"
           size={25}
+
+          
+          onPress={() => {
+
+            signOut();
+
+          
+          }}
+        />
+  
+              
+              
+            
+          ),
+
+        }}
+      />
+
+<Tabs.Screen
+        name="rides"
+
+        options={{
+          title: "Rides",
+          tabBarIcon: ({ color }) => <TabBarIcon name="map" color={color} />,
+          headerRight: () => (
+            
+            <IconButton
+          icon="logout"
+          size={25}
           onPress={() => {
 
             signOut();

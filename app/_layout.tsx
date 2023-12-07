@@ -103,9 +103,21 @@ export default function RootLayout(): ReactNode {
 
                     }}>
 
-                    <Stack.Screen name="parcel/[id]/details"
+                    <Stack.Screen name="ride/[id]/progress"
                       options={{
-                        title: "Parcel Details",
+                        title: "Ride Details",
+
+
+                        headerShown: false,
+
+
+
+                      }}
+                    />
+
+                    <Stack.Screen name="ride/[id]/start"
+                      options={{
+                        title: "Start Ride",
 
 
                         headerShown: true,
@@ -115,23 +127,9 @@ export default function RootLayout(): ReactNode {
                       }}
                     />
 
-                    <Stack.Screen name="parcel/[id]/deposit"
+                    <Stack.Screen name="ride/[id]/end"
                       options={{
-                        title: "Deposit Parcel",
-
-
-                        headerShown: true,
-
-
-
-                      }}
-                    />
-
-                    <Stack.Screen name="parcel/[id]/withdraw"
-                      options={{
-                        title: "Withdraw Parcel",
-
-
+                        title: "End Ride",
                         headerShown: true,
 
 

@@ -187,7 +187,7 @@ export const connectDeviceById = createAsyncThunk('ble/connectDeviceById', async
         thunkAPI.dispatch(setConnectionState({ status: ConnectionState.CONNECTING }));
         await new Promise(resolve => setTimeout(resolve, 500));
 
-
+        demoDevice.id = id;
         return toBLEDeviceVM(demoDevice);
     }
 
@@ -196,7 +196,7 @@ export const connectDeviceById = createAsyncThunk('ble/connectDeviceById', async
     //searching
     thunkAPI.dispatch(setConnectionState({ status: ConnectionState.SEARCHING }));
 
-
+    console.log('Connecting to device with id: ', id);
     device = await bleManager.connectToDevice(id)
 
 
