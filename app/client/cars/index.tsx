@@ -11,6 +11,7 @@ import * as Location from 'expo-location';
 import { LocationObject } from 'expo-location';
 import React from 'react';
 import MapView, { Callout, Marker } from 'react-native-maps';
+import Animated, { FadeIn, FadeInDown, FadeInUp } from 'react-native-reanimated';
 
 
 const PAGE_SIZE = 3;  // Number of documents to fetch in a single request
@@ -47,7 +48,7 @@ export default function CarsInfiniteScroll() {
       query = query.startAfter(startAfter);
     }
 
-    
+
 
     const snapshot = await query.get();
     console.log("snapshot", snapshot.docs.length);
@@ -121,6 +122,54 @@ export default function CarsInfiniteScroll() {
   };
 
   const [location, setLocation] = React.useState<LocationObject | null>(null);
+
+  function distance(loc1, loc2) {
+    const R = 6371e3; // metres
+    const φ1 = loc1.latitude * Math.PI / 180; // φ, λ in radians
+    const φ2 = loc2.latitude * Math.PI / 180;
+    const Δφ = (loc2.latitude - loc1.latitude) * Math.PI / 180;
+    const Δλ = (loc2.longitude - loc1.longitude) * Math.PI / 180;
+
+    const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
+      Math.cos(φ1) * Math.cos(φ2) *
+      Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+    const d = R * c; // in metres
+
+
+
+    return d;
+  }
+
+  const getDistance = (car) => {
+    if (location) {
+      console.log("getDistance", location.coords, car.location, distance(location.coords, car.location));
+
+      let d = distance(location.coords, car.location)
+
+      //if distance is less than 1km return return in metres else return in km
+      //retuen string
+      if (d < 1000) {
+        //round to 2dp
+        return d.toFixed(2) + "m";
+
+
+      } else {
+        return (d / 1000).toFixed(2) + "km";
+
+      }
+
+
+
+
+
+    }
+    return "N/A"
+  }
+
+
 
 
   useEffect(() => {
@@ -286,96 +335,201 @@ export default function CarsInfiniteScroll() {
     // Apply your filters here
     toggleFilterModal();
   };
+
+  useEffect(() => {
+    console.log("showMap", showMap);
+
+    //delay for 1s to allow map to render then animate to first car if there is one and selected is null
+    if (showMap && location && location.coords && mapRef.current && cars.length > 0 && selectedCar === null) {
+      //delay to allow map to render
+      setTimeout(() => {
+        if (mapRef.current && cars[0].location && cars[0].location.latitude && cars[0].location.longitude){
+          console.log("animateToRegion", cars[0].location.latitude, cars[0].location.longitude);
+          mapRef.current.animateCamera({
+            center: {
+              latitude: cars[0].location.latitude,
+              longitude: cars[0].location.longitude,
+            },
+            zoom: 15,
+          });
+          setSelectedCar(cars[0]);
+        }
+      }, 1000);
+
+    }
+  }
+  , [showMap]);
+
+
+  const [selectedCar, setSelectedCar] = useState(null);
+
+  useEffect(() => {
+    console.log("location", location);
+  } , [location]);
   
 
   
+
+
 
   return (
-    <View style={{ flex: 1 }}>
+    <View style={{ flex: 1 ,}}>
+      {!showMap ? (
+        <><Animated.View style={styles.container} entering={FadeInUp.duration(1000).springify()}>
+          <Searchbar
+            style={styles.searchBar}
+            placeholder="Search"
+            onChangeText={onChangeSearch}
+            value={searchQuery} />
+          <Button
+            style={styles.filterButton}
+            icon="filter"
+            onPress={toggleFilterModal}
 
-      <View style={styles.container}>
-        <Searchbar
-          style={styles.searchBar}
-          placeholder="Search"
-          onChangeText={onChangeSearch}
-          value={searchQuery}
-        />
-        <Button
-          style={styles.filterButton}
-          icon="filter"
-          onPress={toggleFilterModal}
+            mode="contained">
 
-          mode="contained">
+            Filters
+          </Button>
+        </Animated.View></>
+      ) : null}
 
-          Filters
-        </Button>
-      </View>
-
-      <Divider />
       <Portal>
-      <Modal
-      visible={isFilterModalVisible}
-      onDismiss={toggleFilterModal}
-      contentContainerStyle={styles.modalContainer}
-    >
-      <Card style={styles.filterModal}>
-        {/* Your filter options go here */}
-        <Title style={styles.modalTitle}>Filter Cars</Title>
-        {/* Example filter option */}
-        <View style={styles.filterOption}>
+        <Modal
+          visible={isFilterModalVisible}
+          onDismiss={toggleFilterModal}
+          contentContainerStyle={styles.modalContainer}
+        >
+          <Card style={styles.filterModal}>
+            {/* Your filter options go here */}
+            <Title style={styles.modalTitle}>Filter Cars</Title>
+            {/* Example filter option */}
+            <View style={styles.filterOption}>
 
-          <Paragraph>Distance:</Paragraph>
-          <TextInput
-          
-            label="Maximum distance (km)"
-            keyboardType="numeric"
-            value={filters.distance.toString()}
-            onChangeText={(text) => setFilters({ ...filters, distance: parseInt(text) })}
+              <Paragraph>Distance:</Paragraph>
+              <TextInput
 
-            // Implement further logic to handle distance filter
-          />
+                label="Maximum distance (km)"
+                keyboardType="numeric"
+                value={filters.distance.toString()}
+                onChangeText={(text) => setFilters({ ...filters, distance: parseInt(text) })}
 
-
+              // Implement further logic to handle distance filter
+              />
 
 
 
 
 
-        </View>
-        {/* Add other filter options as needed */}
-        <Button mode="contained" onPress={applyFilters}>Apply Filters</Button>
-      </Card>
-    </Modal>
-    </Portal>
+
+
+            </View>
+            {/* Add other filter options as needed */}
+            <Button mode="contained" onPress={applyFilters}>Apply Filters</Button>
+          </Card>
+        </Modal>
+      </Portal>
 
       {showMap ? (
         // Render your full map view here
-        <View style={styles.fullMapContainer}>
+        <Animated.View style={styles.fullMapContainer} entering={FadeIn.duration(500)}>
           {location ? (
-            <MapView
-              style={styles.map}
-              ref={mapRef}
-              initialRegion={{
-                latitude: location.coords.latitude,
-                longitude: location.coords.longitude,
-                latitudeDelta: 0.0922 / 2,
-                longitudeDelta: 0.0421 / 2,
+
+            <>
+              {selectedCar ? (
+                <Animated.View entering={FadeInDown.duration(500).springify()} style={{ position: 'absolute',
+                left: 0,
+                right: 0,
+                height: 180,
+                zIndex: 1,
+                backgroundColor: 'transparent',
+                marginRight: 64,
+                  marginLeft: 12,
+                  marginTop: 12,
+              
               }}
-              userLocationAnnotationTitle="My Location"
-              followsUserLocation={true}
-              loadingEnabled={true}
-              showsUserLocation={true}
-            >
-              {cars.map((car) =>
-                car.location && car.location.latitude && car.location.longitude ? (
+                >
+                <Card style={[styles.card,{
+                  margin:0
+                  
+                }
+                 
+                ]}
+
+                onPress={() => {
+                   if(mapRef.current && selectedCar.location && selectedCar.location.latitude && selectedCar.location.longitude){
+                    mapRef.current.animateCamera({
+                      center: {
+                        latitude: selectedCar.location.latitude,
+                        longitude: selectedCar.location.longitude,
+                      },
+                      zoom: 18,
+                    });
+                  }
+                }
+                }
+
+                
+                >
+                  <View style={styles.cardLayout}>
+                    <Card.Cover style={styles.cardImage} source={{ uri: selectedCar.imageURL }} />
+                    <View style={styles.textContainer}>
+                      <Title style={styles.title}>{selectedCar.make} {selectedCar.model} {selectedCar.year}</Title>
+                      <Paragraph style={styles.paragraph}>{selectedCar.status}</Paragraph>
+                      <Paragraph style={styles.paragraph}>License Plate: {selectedCar.licensePlate}</Paragraph>
+                      <Paragraph style={styles.paragraph}>Rating: {selectedCar.rating}</Paragraph>
+
+
+                    </View>
+                  </View>
+
+                  <View style={styles.cardBottom}>
+                    <Paragraph style={styles.distance}>Distance: {getDistance(selectedCar)}</Paragraph>
+                    <Card.Actions style={styles.cardActions}>
+                      <Button
+                        mode='contained'
+                        icon='car'
+                        onPress={() => {
+                          rideCar(selectedCar);
+                        }}>
+                        Ride
+                      </Button>
+                    </Card.Actions>
+                  </View>
+                </Card>
+                </Animated.View>
+
+              ) : null}
+
+              <MapView
+                style={styles.map}
+                ref={mapRef}
+                initialRegion={{
+                  latitude: location.coords.latitude,
+                  longitude: location.coords.longitude,
+                  latitudeDelta: 0.0922 / 2,
+                  longitudeDelta: 0.0421 / 2,
+                }}
+                userLocationAnnotationTitle="My Location"
+                followsUserLocation={true}
+                loadingEnabled={true}
+                showsUserLocation={true}
+              >
+                {cars.map((car) => car.location && car.location.latitude && car.location.longitude ? (
                   <Marker
                     key={car.id}
                     coordinate={{
                       latitude: car.location.latitude,
                       longitude: car.location.longitude,
                     }}
+                    onPress={() => {
+                      setSelectedCar(car);
+                    }}
                   >
-                    <Callout style={styles.calloutStyle}>
+                    <Callout style={styles.calloutStyle}
+                      onPress={() => {
+                        setSelectedCar(car);
+                      }}
+                    >
                       <View style={styles.markerText}>
                         <Avatar.Icon icon="car" size={32} />
                         <Title style={styles.markerTitle}>{car.make} {car.model} {car.year}</Title>
@@ -383,16 +537,17 @@ export default function CarsInfiniteScroll() {
                     </Callout>
                   </Marker>
                 ) : null
-              )}
-            </MapView>
+                )}
+              </MapView></>
           ) : (
-            <ActivityIndicator style={styles.loader} />
+            <><Title>Waiting for location...</Title>
+            <ActivityIndicator style={styles.loader} /></>
           )}
-        </View>
+        </Animated.View>
       ) : (
 
 
-        <FlatList
+        <Animated.FlatList entering={FadeIn.duration(500)}
           // style={{ marginBottom: 50 }}
           data={cars}
           renderItem={({ item }) => (
@@ -410,7 +565,7 @@ export default function CarsInfiniteScroll() {
               </View>
 
               <View style={styles.cardBottom}>
-                <Paragraph style={styles.distance}>Distance: 69 km</Paragraph>
+                <Paragraph style={styles.distance}>Distance: {getDistance(item)}</Paragraph>
                 <Card.Actions style={styles.cardActions}>
                   <Button
                     mode='contained'
@@ -452,6 +607,7 @@ export default function CarsInfiniteScroll() {
         contentStyle={styles.buttonContent}
         onPress={() => {
           setShowMap(!showMap);
+
         }}
       >
         {showMap ? "List" : "Map"}
@@ -480,6 +636,7 @@ const styles = StyleSheet.create({
   },
   searchBar: {
     flex: 1,
+    
     marginRight: 10, // You can adjust the margin as needed
     borderRadius: 30, // You might need to adjust this to match your design
     // Add shadow or other styles as needed
@@ -507,6 +664,7 @@ const styles = StyleSheet.create({
   map: {
     width: '100%',
     height: '100%',
+    
   },
   markerText: {
     flexDirection: 'row',
@@ -562,7 +720,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     backgroundColor: 'transparent',
-   
+
   },
   distance: {
     fontSize: 14,
@@ -575,7 +733,7 @@ const styles = StyleSheet.create({
     padding: 10,
   },
   modalTitle: {
-   
+
   },
   filterOption: {
     // Style your individual filter option
