@@ -36,6 +36,7 @@ export default function TabLayout() {
       screenOptions={{
         tabBarActiveTintColor: Colors[colorScheme==="dark" ? "dark" : "light"].tint,
       }}
+      initialRouteName="cars"
     >
 
       <Tabs.Screen
@@ -67,13 +68,18 @@ export default function TabLayout() {
 
 <Tabs.Screen
         name="cars"
+        //set as default
+
+        
 
         options={{
           title: "Cars",
+          headerShown: false,
+
           tabBarIcon: ({ color }) => <TabBarIcon name="car" color={color} />,
           headerRight: () => (
             
-            <IconButton
+          <IconButton
           icon="logout"
           size={25}
 
@@ -121,7 +127,7 @@ export default function TabLayout() {
         }}
       />
 
-      <Tabs.Screen
+      {/* <Tabs.Screen
         name="index"
         // TODO: Type
         
@@ -148,14 +154,14 @@ export default function TabLayout() {
           
         }}
       />
-      
-      <Tabs.Screen
+       */}
+      {/* <Tabs.Screen
         name="keybot"
         options={{
           title: "My Box",
           tabBarIcon: ({ color }) => <TabBarIcon2 name="car-wireless" color={color} />,
         }}
-      />
+      /> */}
 
 
 

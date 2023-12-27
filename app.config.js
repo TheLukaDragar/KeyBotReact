@@ -10,7 +10,7 @@ module.exports = ({ config }) => {
             RPCUrl: "https://bellecour.iex.ec",
             explorerUrl: "https://blockscout-bellecour.iex.ec",
             DLMDApp: "0x90b44D29851c76A73619106EBd26d61d6f74D918",
-            use_demo_device: true,
+            use_demo_device: false,
             
         },
     };

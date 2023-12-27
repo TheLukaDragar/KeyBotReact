@@ -4,7 +4,7 @@ import { LocationObject } from 'expo-location';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { StyleSheet } from 'react-native';
-import { ActivityIndicator, Title, useTheme } from 'react-native-paper';
+import { ActivityIndicator, Button, Paragraph, Title, useTheme } from 'react-native-paper';
 import Animated, { FadeInUp } from 'react-native-reanimated';
 import Toast from 'react-native-root-toast';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -41,6 +41,7 @@ export default function ConnectToTheBox() {
           id: snapshot.key,
           ...snapshot.val()
         };
+        console.log("RIDE", ride);
         setRide(ride);
       });
       // Unsubscribe from the listener when it's no longer needed
@@ -60,6 +61,26 @@ export default function ConnectToTheBox() {
       // Cleanup logic here if needed
     }
   }, []);
+  const [elapsedTime, setElapsedTime] = useState(0);
+
+  useEffect(() => {
+    if (ride?.startTime) {
+      const interval = setInterval(() => {
+        const now = new Date().getTime();
+        const start = new Date(ride.startTime).getTime();
+        setElapsedTime(Math.floor((now - start) / 1000)); // Elapsed time in seconds
+      }, 1000);
+
+      return () => clearInterval(interval);
+    }
+  }, [ride?.startTime]);
+
+  const formatElapsedTime = (seconds) => {
+    const h = Math.floor(seconds / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
+    const s = seconds % 60;
+    return `${h}:${m}:${s}`;
+  };
 
 
 
@@ -133,8 +154,42 @@ export default function ConnectToTheBox() {
         style={{ flex: 10, }}
       >
         {location && ride ? (
-          <View>
+          <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
             <Title style={styles.title}>Ride in progress</Title>
+
+            <Paragraph style={styles.subtitle}>ride Id: {params.id}</Paragraph>
+            <Paragraph style={styles.subtitle}>Elapsed Time: {formatElapsedTime(elapsedTime)}</Paragraph>
+            <Paragraph style={styles.subtitle}>E: {JSON.stringify(ride)}</Paragraph>
+
+            <Button mode="contained"
+              icon="check"
+              contentStyle={{ height: 80, width: 200 }}
+              style={{ marginVertical: 10 }}
+              onPress={() => {
+
+                //navigate to ride progress
+                router.replace("/ride/" + ride.id + "/end");
+
+              }}>
+              End Ride
+            </Button>
+
+            <Button mode="contained"
+              icon="bug"
+              contentStyle={{ height: 80, width: 150 }}
+              onPress={() => {
+
+                //navigate to ride progress
+                router.replace("/ride/" + ride.keybotId + "/control");
+
+              }}>
+              Debug
+            </Button>
+
+
+
+
+
           </View>
 
         ) : (

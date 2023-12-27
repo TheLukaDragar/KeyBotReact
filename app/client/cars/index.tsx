@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { FlatList, StyleSheet } from 'react-native';
 import { ActivityIndicator, Avatar, Button, Card, Divider, Modal, Paragraph, Portal, Searchbar, TextInput, Title } from 'react-native-paper';
 import { useAuth } from '../../../auth/provider';
-import { View } from '../../../components/Themed';
+import { View, getTheme } from '../../../components/Themed';
 
 import database from '@react-native-firebase/database';
 import * as Location from 'expo-location';
@@ -12,9 +12,10 @@ import { LocationObject } from 'expo-location';
 import React from 'react';
 import MapView, { Callout, Marker } from 'react-native-maps';
 import Animated, { FadeIn, FadeInDown, FadeInUp } from 'react-native-reanimated';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 
-const PAGE_SIZE = 3;  // Number of documents to fetch in a single request
+const PAGE_SIZE = 10;  // Number of documents to fetch in a single request
 
 export default function CarsInfiniteScroll() {
   const [cars, setCars] = useState([]);
@@ -29,6 +30,8 @@ export default function CarsInfiniteScroll() {
   const { user } = useAuth();
 
   const router = useRouter();
+  const insets = useSafeAreaInsets();
+
 
   const [filters, setFilters] = useState({
     distance: 30,
@@ -68,7 +71,39 @@ export default function CarsInfiniteScroll() {
     console.log("set lastVisible", snapshot.docs[snapshot.docs.length - 1].data().model);
 
 
-    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    const carss = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+    //check if there is a car that has the current user as the current_userId
+    //if there is set that car as the selected car
+
+    const _inUseCar = carss.find(car => car.current_userId === user.uid);
+    console.log("curent user car", selectedCar);
+
+
+    if (_inUseCar) {
+      setInUseCar(_inUseCar);
+      //sort so that the selected car is first
+
+      const reorderedCars = carss.filter(car => car.id !== _inUseCar.id);
+      reorderedCars.unshift(_inUseCar);
+      return reorderedCars;
+
+
+
+
+    }
+    else {
+      setInUseCar(null);
+    }
+
+    return carss;
+
+
+
+
+
+
+
   };
 
   const loadMoreCars = useCallback(async () => {
@@ -145,7 +180,7 @@ export default function CarsInfiniteScroll() {
 
   const getDistance = (car) => {
     if (location) {
-      console.log("getDistance", location.coords, car.location, distance(location.coords, car.location));
+      // console.log("getDistance", location.coords, car.location, distance(location.coords, car.location));
 
       let d = distance(location.coords, car.location)
 
@@ -248,16 +283,16 @@ export default function CarsInfiniteScroll() {
           carId: car.id,
           fleetId: fleetId,
           startLocation: {
-            latitude: 0,
-            longitude: 0,
+            latitude: location.coords.latitude,
+            longitude: location.coords.longitude,
           },
           endLocation: {
             latitude: 0,
             longitude: 0,
           },
           currentLocation: {
-            latitude: 0,
-            longitude: 0,
+            latitude: location.coords.latitude,
+            longitude: location.coords.longitude,
           },
           createdAt: firestore.Timestamp.now(),
           startTime: 0,
@@ -278,9 +313,10 @@ export default function CarsInfiniteScroll() {
         });
 
 
-        if (carDoc.data().availability === true || true) {
+        if (carDoc.data()?.current_userId === null || carDoc.data()?.current_userId === undefined) {
           transaction.update(carRef, {
-            availability: false,
+            current_userId: user.uid,
+            current_rideId: rideRef.key,
             status: 'In use',
 
           });
@@ -299,17 +335,23 @@ export default function CarsInfiniteScroll() {
             if (item.id === car.id) {
               return {
                 ...item,
-                availability: false,
+                current_userId: user.uid,
+                current_rideId: rideRef.key,
                 status: 'In use',
               };
             }
             return item;
           });
+
+          setInUseCar(car);
+
+
           setCars(newCars);
 
 
 
         } else {
+          console.log("Car is not available!", carDoc.data());
           throw 'Car is not available!';
         }
       });
@@ -343,7 +385,7 @@ export default function CarsInfiniteScroll() {
     if (showMap && location && location.coords && mapRef.current && cars.length > 0 && selectedCar === null) {
       //delay to allow map to render
       setTimeout(() => {
-        if (mapRef.current && cars[0].location && cars[0].location.latitude && cars[0].location.longitude){
+        if (mapRef.current && cars[0].location && cars[0].location.latitude && cars[0].location.longitude) {
           console.log("animateToRegion", cars[0].location.latitude, cars[0].location.longitude);
           mapRef.current.animateCamera({
             center: {
@@ -358,29 +400,45 @@ export default function CarsInfiniteScroll() {
 
     }
   }
-  , [showMap]);
+    , [showMap]);
 
 
   const [selectedCar, setSelectedCar] = useState(null);
 
+  const [inUseCar, setInUseCar] = useState<any>(null);
+
   useEffect(() => {
     console.log("location", location);
-  } , [location]);
-  
+  }, [location]);
 
-  
+  const theme = getTheme();
+
+
+
 
 
 
   return (
-    <View style={{ flex: 1 ,}}>
+    <View style={{ flex: 1,paddingTop: insets.top,
+      paddingBottom: insets.bottom,
+      paddingLeft: insets.left,
+      paddingRight: insets.right, }}>
       {!showMap ? (
-        <><Animated.View style={styles.container} entering={FadeInUp.duration(1000).springify()}>
-          <Searchbar
-            style={styles.searchBar}
-            placeholder="Search"
-            onChangeText={onChangeSearch}
-            value={searchQuery} />
+        <><Animated.View style={styles.container}>
+          <Title
+            style={{
+              fontSize: 30, fontWeight: "800", color: theme.text, flex: 1,
+
+              marginRight: 10, // You can adjust the margin as needed
+              borderRadius: 30,
+              justifyContent: 'center',
+              alignItems: 'center',
+              marginTop: 10,
+              marginLeft: 10,
+            }}
+          >{
+            inUseCar ? "Your Car" : "Find a Car"
+          }</Title>
           <Button
             style={styles.filterButton}
             icon="filter"
@@ -431,71 +489,72 @@ export default function CarsInfiniteScroll() {
 
       {showMap ? (
         // Render your full map view here
-        <Animated.View style={styles.fullMapContainer} entering={FadeIn.duration(500)}>
+        <Animated.View style={styles.fullMapContainer} >
           {location ? (
 
             <>
               {selectedCar ? (
-                <Animated.View entering={FadeInDown.duration(500).springify()} style={{ position: 'absolute',
-                left: 0,
-                right: 0,
-                height: 180,
-                zIndex: 1,
-                backgroundColor: 'transparent',
-                marginRight: 64,
+                <Animated.View  style={{
+                  position: 'absolute',
+                  left: 0,
+                  right: 0,
+                  height: 180,
+                  zIndex: 1,
+                  backgroundColor: 'transparent',
+                  marginRight: 64,
                   marginLeft: 12,
                   marginTop: 12,
-              
-              }}
-                >
-                <Card style={[styles.card,{
-                  margin:0
-                  
-                }
-                 
-                ]}
 
-                onPress={() => {
-                   if(mapRef.current && selectedCar.location && selectedCar.location.latitude && selectedCar.location.longitude){
-                    mapRef.current.animateCamera({
-                      center: {
-                        latitude: selectedCar.location.latitude,
-                        longitude: selectedCar.location.longitude,
-                      },
-                      zoom: 18,
-                    });
+                }}
+                >
+                  <Card style={[styles.card, {
+                    margin: 0
+
                   }
-                }
-                }
 
-                
-                >
-                  <View style={styles.cardLayout}>
-                    <Card.Cover style={styles.cardImage} source={{ uri: selectedCar.imageURL }} />
-                    <View style={styles.textContainer}>
-                      <Title style={styles.title}>{selectedCar.make} {selectedCar.model} {selectedCar.year}</Title>
-                      <Paragraph style={styles.paragraph}>{selectedCar.status}</Paragraph>
-                      <Paragraph style={styles.paragraph}>License Plate: {selectedCar.licensePlate}</Paragraph>
-                      <Paragraph style={styles.paragraph}>Rating: {selectedCar.rating}</Paragraph>
+                  ]}
+
+                    onPress={() => {
+                      if (mapRef.current && selectedCar.location && selectedCar.location.latitude && selectedCar.location.longitude) {
+                        mapRef.current.animateCamera({
+                          center: {
+                            latitude: selectedCar.location.latitude,
+                            longitude: selectedCar.location.longitude,
+                          },
+                          zoom: 18,
+                        });
+                      }
+                    }
+                    }
 
 
+                  >
+                    <View style={styles.cardLayout}>
+                      <Card.Cover style={styles.cardImage} source={{ uri: selectedCar.imageURL }} />
+                      <View style={styles.textContainer}>
+                        <Title style={styles.title}>{selectedCar.make} {selectedCar.model} {selectedCar.year}</Title>
+                        <Paragraph style={styles.paragraph}>{selectedCar.status}</Paragraph>
+                        <Paragraph style={styles.paragraph}>License Plate: {selectedCar.licensePlate}</Paragraph>
+                        <Paragraph style={styles.paragraph}>Rating: {selectedCar.rating}</Paragraph>
+
+
+                      </View>
                     </View>
-                  </View>
 
-                  <View style={styles.cardBottom}>
-                    <Paragraph style={styles.distance}>Distance: {getDistance(selectedCar)}</Paragraph>
-                    <Card.Actions style={styles.cardActions}>
-                      <Button
-                        mode='contained'
-                        icon='car'
-                        onPress={() => {
-                          rideCar(selectedCar);
-                        }}>
-                        Ride
-                      </Button>
-                    </Card.Actions>
-                  </View>
-                </Card>
+                    <View style={styles.cardBottom}>
+                      <Paragraph style={styles.distance}>Distance: {getDistance(selectedCar)}</Paragraph>
+                      <Card.Actions style={styles.cardActions}>
+                        <Button
+                          mode='contained'
+                          icon='car'
+                          onPress={() => {
+                            rideCar(selectedCar);
+                          }}>
+                          Ride
+                        </Button>
+                      </Card.Actions>
+                    </View>
+                  </Card>
                 </Animated.View>
 
               ) : null}
@@ -541,17 +600,21 @@ export default function CarsInfiniteScroll() {
               </MapView></>
           ) : (
             <><Title>Waiting for location...</Title>
-            <ActivityIndicator style={styles.loader} /></>
+              <ActivityIndicator style={styles.loader} /></>
           )}
         </Animated.View>
       ) : (
 
 
-        <Animated.FlatList entering={FadeIn.duration(500)}
+        <Animated.FlatList 
           // style={{ marginBottom: 50 }}
           data={cars}
           renderItem={({ item }) => (
-            <Card style={styles.card}>
+            <Card style={styles.card} 
+            >
+
+              
+              
               <View style={styles.cardLayout}>
                 <Card.Cover style={styles.cardImage} source={{ uri: item.imageURL }} />
                 <View style={styles.textContainer}>
@@ -559,6 +622,7 @@ export default function CarsInfiniteScroll() {
                   <Paragraph style={styles.paragraph}>{item.status}</Paragraph>
                   <Paragraph style={styles.paragraph}>License Plate: {item.licensePlate}</Paragraph>
                   <Paragraph style={styles.paragraph}>Rating: {item.rating}</Paragraph>
+                  {/* <Paragraph style={styles.paragraph}>current_userId: {item.current_userId}</Paragraph> */}
 
 
                 </View>
@@ -570,11 +634,32 @@ export default function CarsInfiniteScroll() {
                   <Button
                     mode='contained'
                     icon='car'
+                    disabled={(item.current_userId !== null && item.current_userId !== undefined) || inUseCar !== null}
                     onPress={() => {
                       rideCar(item);
                     }}>
                     Ride
                   </Button>
+
+                  {item.id === inUseCar?.id ? (
+                    
+
+                    <Button
+                      mode='contained'
+                      icon='car-info'
+                      onPress={() => {
+                        router.push("ride/" + item.current_rideId + "/progress");
+                      }}>
+                      View
+                      </Button>
+                      
+                  
+                  ) : null} 
+
+
+
+
+
                 </Card.Actions>
               </View>
             </Card>
@@ -634,13 +719,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 10,
   },
-  searchBar: {
-    flex: 1,
-    
-    marginRight: 10, // You can adjust the margin as needed
-    borderRadius: 30, // You might need to adjust this to match your design
-    // Add shadow or other styles as needed
-  },
+ 
   filterButton: {
     justifyContent: 'center',
     borderRadius: 30, // Match this to the search bar's borderRadius
@@ -664,7 +743,7 @@ const styles = StyleSheet.create({
   map: {
     width: '100%',
     height: '100%',
-    
+
   },
   markerText: {
     flexDirection: 'row',

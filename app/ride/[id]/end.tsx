@@ -1,3 +1,5 @@
+import database from '@react-native-firebase/database';
+import firestore from '@react-native-firebase/firestore';
 import Constants from 'expo-constants';
 import * as Location from 'expo-location';
 import { LocationObject } from 'expo-location';
@@ -6,7 +8,6 @@ import React, { useEffect, useRef, useState } from 'react';
 import { FlatList, Linking, StyleSheet } from 'react-native';
 import PagerView from 'react-native-pager-view';
 import { ActivityIndicator, Avatar, Button, Subheading, Title, useTheme } from 'react-native-paper';
-import { AirbnbRating } from 'react-native-ratings';
 import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
 import Toast from 'react-native-root-toast';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -15,9 +16,11 @@ import { KeyBotCommand, KeyBotState } from '../../../ble/bleSlice.contracts';
 import ScreenIndicators from '../../../components/ScreenIndicators';
 import StepCard from '../../../components/StepCard';
 import { View } from '../../../components/Themed';
-import { Box, ParcelData, PreciseLocation, RateTransactionDto, RatingType, getErrorMessage, isErrorWithMessage, useGetParcelByIdQuery, useLazyGetBoxAccessKeyQuery, useLazyGetBoxPreciseLocationQuery, useLazyGetBoxQuery, useRateTransactionMutation, useUpdateParcelByIdMutation, useWithdrawParcelMutation } from '../../../data/api';
-import { CreateDatasetResponse, Metadata, UploadMetadataToIPFSResponse, callCreateDataset, callPushToSMS, callSellDataset, getNftDetails, setReputation, updateBox, uploadMetadataToIPFS } from '../../../data/blockchain';
+import { Box, ParcelData, PreciseLocation, getErrorMessage, isErrorWithMessage, useDepositParcelMutation, useGetParcelByIdQuery, useLazyGetBoxAccessKeyQuery, useLazyGetBoxPreciseLocationQuery, useLazyGetBoxQuery, useUpdateParcelByIdMutation } from '../../../data/api';
+import { ApproveTransfer, ApproveTransferResponse, CreateDatasetResponse, Metadata, UploadMetadataToIPFSResponse, approveTransfer, callCreateDataset, callPushToSMS, callSellDataset, updateBox, uploadMetadataToIPFS } from '../../../data/blockchain';
 import { useAppDispatch, useAppSelector } from '../../../data/hooks';
+import { getLocation } from '../../../utils/getlocation';
+import CryptoES from 'crypto-es';
 
 export default function ConnectToTheBox() {
   const router = useRouter();
@@ -28,33 +31,15 @@ export default function ConnectToTheBox() {
   const ble = useAppSelector((state) => state.ble);
 
   const [page, setPage] = useState(0);
-  const { data: parcel, error, isLoading } = useGetParcelByIdQuery(parseInt(String(params.id)));
-  const [getBox, { data: boxData }] = useLazyGetBoxQuery();
-  const [updateParcelById, { }] = useUpdateParcelByIdMutation();
-  const [withdrawParcel, { }] = useWithdrawParcelMutation();
-  const [nftDetails, setNftDetails] = useState<{
-    parcelId: string, sender: string, receiver: string
-  } | undefined>(undefined);
+ 
 
-  const [boxDetails, setBoxDetails] = useState<Box | undefined>(undefined);
+  const [KeyBot, setKeyBot] = useState<any>(undefined);
+  const [ride, setRide] = useState<any>(undefined);
 
   const [location, setLocation] = React.useState<LocationObject | null>(null);
 
-  const [getBoxAccessKey] = useLazyGetBoxAccessKeyQuery();
-  const [getBoxPreciseLocation] = useLazyGetBoxPreciseLocationQuery();
-
-  const [rateTransaction, {
-    isLoading: rateTransactionLoading,
-  }] = useRateTransactionMutation();
-  const [isCarUnlocked, setIsCarUnlocked] = useState(false);
-  const [isBlockchainProcessing, setIsBlockchainProcessing] = useState(false);
-  const [isBlockchainDone, setIsBlockchainDone] = useState(false);
-  const [BlockchainTransaction, setBlockchainTransaction] = useState("");
-  const [boxRating, setBoxRating] = useState(-1);
-  const [courierRating, setCourierRating] = useState(-1);
 
   const parcelNFTSCAddress = Constants?.expoConfig?.extra?.parcelNFTSCAddress;
-  const explorerUrl = Constants?.expoConfig?.extra?.explorerUrl;
   const flatListRef = React.useRef<FlatList>(null);
 
 
@@ -64,17 +49,61 @@ export default function ConnectToTheBox() {
 
   const [activeStep, setActiveStep] = useState(0);
   const [errorStep, setErrorStep] = useState<number | null>(null);
-  const steps = [
-
-    "Uploading MetaData to IPFS",
-    "Creating dataset",
-    "Pushing to SMS",
-    "Selling dataset",
-    "Updating MetaData of the Box NFT",
-    "Updating Parcel status"
-
-  ];
+ 
   const pagerRef = useRef<PagerView>(null);
+
+
+  const fetchRide = async () => {
+    try {
+      let rideRef = database().ref('Rides').child(String(params.id));
+      rideRef.on('value', snapshot => {
+        const ride = {
+          id: snapshot.key,
+          ...snapshot.val()
+        };
+        setRide(ride);
+      });
+      // Unsubscribe from the listener when it's no longer needed
+      return () => rideRef.off();
+    } catch (error) {
+      console.error("Error fetching ride: ", error);
+      // Handle the error as you need here
+    }
+  }
+
+  const fetchKeyBot = async (keybotId: string) => {
+    try {
+      let keybotRef = firestore().collection('KeyBots').doc(keybotId);
+      keybotRef.onSnapshot(docSnapshot => {
+        const keybot = {
+          id: docSnapshot.id,
+          ...docSnapshot.data()
+        };
+        setKeyBot(keybot);
+      });
+    } catch (error) {
+      console.error("Error fetching keybot: ", error);
+      // Handle the error as you need here
+    }
+  }
+
+  useEffect(() => {
+    fetchRide();
+
+    return () => {
+      // Cleanup logic here if needed
+    }
+  }, []);
+
+  useEffect(() => {
+    if (ride) {
+      fetchKeyBot(ride.keybotId);
+    }
+  }, [ride]);
+
+
+
+
 
 
   useEffect(() => {
@@ -100,82 +129,6 @@ export default function ConnectToTheBox() {
 
   };
 
-
-
-
-
-  useEffect(() => {
-    if (parcel) {
-      const fetchBoxDetails = async () => {
-        let boxResponse = await getBox(parseInt(parcel.box_id)).unwrap();
-        setBoxDetails(boxResponse);
-      }
-      fetchBoxDetails();
-      const fetchBlockchainDetails = async () => {
-        try {
-          let blockchainDetails = await dispatch(getNftDetails(parcel.nftId)).unwrap();
-          console.log(blockchainDetails);
-          setNftDetails(blockchainDetails);
-        } catch (error) {
-          console.error('Failed to load box details', error);
-        }
-      }
-      fetchBlockchainDetails();
-    }
-  }, [parcel, getBox]);
-
-
-  //rating
-  useEffect(() => {
-    const rateBox = async () => {
-      if (boxRating > 0 && parcel && boxData) {
-        console.log("boxRating", boxRating);
-        try {
-          const rating_box: RateTransactionDto = {
-            rating: boxRating,
-            recipient_id: boxData?.id!, //for now only recipient can rate
-            parcel_id: parcel.id,
-            ratingType: RatingType.SMART_BOX,
-          };
-          await rateTransaction(rating_box).unwrap();
-          console.log("rating_box success");
-        } catch (error) {
-          console.log(error);
-        }
-      }
-    };
-
-    rateBox();
-  }, [boxRating]);
-
-  useEffect(() => {
-    const rateCourier = async () => {
-      if (courierRating > 0 && parcel && boxData && nftDetails) {
-        console.log("courierRating", courierRating);
-        try {
-          const rating_courier: RateTransactionDto = {
-            rating: 5,
-            recipient_id: parseInt(parcel.courier_id),
-            parcel_id: parcel.id,
-            ratingType: RatingType.COURIER,
-          };
-          await rateTransaction(rating_courier).unwrap();
-          console.log("rating_courier success");
-
-          //also rate on blockchain 
-          const set_BC_rating = await dispatch(setReputation({ user: nftDetails.sender, score: courierRating })).unwrap();
-          console.log("set_BC_rating", set_BC_rating);
-        }
-        catch (error) {
-          console.log(error);
-        }
-      }
-    };
-
-    rateCourier();
-  }, [courierRating]);
-
-
   useEffect(() => {
 
     //refetch();
@@ -197,29 +150,25 @@ export default function ConnectToTheBox() {
         return;
       }
 
-      let location = await Location.getCurrentPositionAsync({});
+      let location = await getLocation()
       setLocation(location);
     })();
   }, [])
 
 
-  async function BleConnect(box: Box) {
+  async function BleConnect(keybot: any) {
     try {
 
       //0.get more details about the box
-      console.log("callin getBoxDetails with id", box.id);
-      // const boxDetails = await getBoxDetails(box.id).unwrap();
+      console.log("callin getKeyBot with id", keybot.id);
+      // const KeyBot = await getKeyBot(box.id).unwrap();
 
-      // console.log("boxDetails",boxDetails);
+      // console.log("KeyBot",KeyBot);
 
-      const preciseLocationBox = await getBoxPreciseLocation(box.id).unwrap();
-      console.log("preciseLocationBox", preciseLocationBox);
-
-
-
+     
 
       // 1. Connect to device
-      const connectResult = await dispatch(connectDeviceById({ id: box.macAddress })).unwrap();
+      const connectResult = await dispatch(connectDeviceById({ id: keybot.mac })).unwrap();
       console.log("connectResult", connectResult);
 
       // 2. Get the challenge
@@ -251,19 +200,21 @@ export default function ConnectToTheBox() {
         inaccuracy: location?.coords.accuracy!,
       }
 
-      //TODO REMOVE THIS HACK and use the real location
+        //For now we do this locally then we will do it on the server
+        let key = keybot.key;
+        const key128Bits = CryptoES.enc.Utf8.parse(key);
+        //ecb mode
+        const encrypted = CryptoES.AES.encrypt(challenge, key128Bits, { mode: CryptoES.mode.ECB, padding: CryptoES.pad.NoPadding });
+        //to hex
+        let encryptedHex = encrypted.ciphertext.toString(CryptoES.enc.Hex);
+        //to uppercase
+        encryptedHex = encryptedHex.toUpperCase();
+        console.log("encrypted: " + encryptedHex);
+        let solved_challenge = encryptedHex
 
-
-
-      // 3. Get solution from api 
-      const response = await getBoxAccessKey({ challenge: challenge, preciseLocation: preciseLocationBox, boxId: box.id }).unwrap();
-
-
-
-      console.log("getBoxAccessKey", response.accessKey);
 
       // 4. Authenticate
-      const auth = await dispatch(authenticate({ solved_challenge: response.accessKey })).unwrap();
+      const auth = await dispatch(authenticate({ solved_challenge: solved_challenge })).unwrap();
       console.log(auth);
 
       if (auth) {
@@ -315,78 +266,39 @@ export default function ConnectToTheBox() {
       }
       );
   }
-
-  async function blockchain(box: Box, parcel_data: ParcelData, preciseLocation: PreciseLocation) {
+  //start ride //set the realtime propertires 
+  const endRide = async () => {
     try {
-      setActiveStep(0); // Start from the first step
+      //set the realtime properties
+      let rideRef = database().ref('Rides').child(String(params.id));
+      rideRef.update({
+        startTime: database.ServerValue.TIMESTAMP,
+        status: "Completed",
+        
+        currentLocation: {
+          latitude: location?.coords.latitude,
+          longitude: location?.coords.longitude,
+        },
+        endLocation: {
+          latitude: location?.coords.latitude,
+          longitude: location?.coords.longitude,
+        }
+      });
 
 
-      // Step 1: Upload metadata to IPFS
+      //update Car status
+      let carRef = firestore().collection('Cars').doc(ride.carId);
+      carRef.update({
+        status: "Available",
+        current_rideId: null,
+        current_userId: null,
 
+        location: {
+          latitude: location?.coords.latitude,
+          longitude: location?.coords.longitude,
+        }
 
-
-      const metadata: Metadata = {
-        location: preciseLocation,
-        user_id: parseInt(parcel_data.recipient_id),
-        parcel_id: parcel_data.id,
-        action: "Client picked up the parcel from the Vehicle",
-        timestamp: Date.now().toString(),
-        testingEnv: false,
-      }; // Prepare metadata from parcel data
-
-
-      const uploadToIPFS_Result: UploadMetadataToIPFSResponse = await dispatch(uploadMetadataToIPFS(metadata)).unwrap();
-
-
-      // Step 2: Create dataset
-      nextStep();
-
-      const createDataset_Result: CreateDatasetResponse = await dispatch(callCreateDataset({
-        ipfsRes: uploadToIPFS_Result.ipfsRes,
-        aesKey: uploadToIPFS_Result.aesKey,
-        checksum: uploadToIPFS_Result.checksum,
-      })).unwrap();
-
-
-      // Step 3: Push to SMS
-      nextStep();
-
-      await dispatch(callPushToSMS({
-        dataset_address: createDataset_Result.datasetAddress,
-        aesKey: uploadToIPFS_Result.aesKey,
-      })).unwrap();
-
-
-      // Step 4: Sell dataset
-      nextStep();
-
-      await dispatch(callSellDataset({
-        dataset_address: createDataset_Result.datasetAddress,
-        price: 0,
-      })).unwrap();
-
-
-      nextStep();
-      // Step 5: update box NFT
-
-      const update_box = await dispatch(updateBox({
-        tokenId: parcel_data.nftId,
-        dataset: createDataset_Result.datasetAddress,
-        transferOwnership: false,
-      })).unwrap()
-
-
-      console.log("update_box", update_box);
-      nextStep();
-
-
-      // Step 8: update parcel status
-
-      const withdraw = await withdrawParcel(parcel_data.id).unwrap();
-
-
-
-      nextStep();
+      });
 
 
 
@@ -394,38 +306,23 @@ export default function ConnectToTheBox() {
 
 
 
+      //disconect from keybor
+      BleDisconnect();
 
 
-      // If everything is successful, reset the errorStep and show a success message
-      setErrorStep(null);
-      setIsBlockchainProcessing(false);
-      setIsBlockchainDone(true);
-      setBlockchainTransaction(update_box.txHash);
-
-
+      // Unsubscribe from the listener when it's no longer needed
+      return () => rideRef.off();
     } catch (error) {
-      handleError(activeStep, error); // If there's an error, handle it
+      console.error("Error fetching ride: ", error);
+      alert("Error fetching ride: " + error);
+      // Handle the error as you need here
     }
   }
 
+ 
 
 
 
-
-  const renderStepCard = ({ item, index }: { item: string; index: number }) => {
-    // console.log("renderStepCard", item, index);
-    // console.log("activeStep", activeStep);
-    // console.log("errorStep", errorStep);
-
-    const status = errorStep === index ? 'error' : index < activeStep ? 'completed' : 'pending';
-
-    //errorStep
-    // console.log("status", status);
-
-
-
-    return <StepCard title={item} status={status} />;
-  };
 
   return (
     <View style={{ flex: 1 }}>
@@ -433,7 +330,7 @@ export default function ConnectToTheBox() {
         entering={FadeInUp.duration(1000).springify()}
         style={{ flex: 10, }}
       >
-        {boxDetails && location && parcel ? (
+        {KeyBot && location && ride ? (
           <PagerView style={{
             flex: 1,
 
@@ -445,7 +342,7 @@ export default function ConnectToTheBox() {
           >
             <View key="0" style={styles.page}>
 
-              {ble.connectedDevice?.id === boxDetails.macAddress
+              {ble.connectedDevice?.id === KeyBot.mac
                 && ble.deviceConnectionState.status === 'ready'
 
                 ? (
@@ -458,17 +355,18 @@ export default function ConnectToTheBox() {
                     />
                     <Title style={styles.title}
 
-                    >Connect to the Vehicle system (Box)</Title>
+                    >Connect to the Vehicle (KeyBot)</Title>
                     <Title style={styles.subtitle}>
-                      To unlock the Vehicle, you need to connect to the box first.
+                    {ble.connectedDevice?.id}
+                      To Lock the Vehicle, you need to connect to the KeyBot first.
 
                     </Title>
 
                     <Button icon="bluetooth" mode="contained" contentStyle={{ height: 80, width: 200 }}
 
                       onPress={() => {
-                        console.log('Connecting to Box ' + boxDetails?.macAddress);
-                        BleConnect(boxDetails);
+                        console.log('Connecting to Box ' + KeyBot?.mac);
+                        BleConnect(KeyBot);
                       }}>
                       {ble.deviceConnectionState.status}
                     </Button>
@@ -492,80 +390,6 @@ export default function ConnectToTheBox() {
                 }}
               />
               <Title style={styles.title}
-              >Unlock the Vehicle</Title>
-              <Title
-                style={styles.subtitle}
-              >{ble.keyBotState.status === KeyBotState.KEYBOT_PRESSING_LEFT || ble.keyBotState.status === KeyBotState.KEYBOT_PRESSING_RIGHT ?
-                "Unlocking the vehicle..."
-                : "Press the unlock button"
-
-
-                }</Title>
-
-
-              <Button
-                icon=""
-                mode="contained"
-                contentStyle={{ height: 80, width: 200 }}
-                loading={ble.keyBotState.status === KeyBotState.KEYBOT_PRESSING_LEFT || ble.keyBotState.status === KeyBotState.KEYBOT_PRESSING_RIGHT}
-                disabled={ble.keyBotState.status === KeyBotState.KEYBOT_PRESSING_LEFT || ble.keyBotState.status === KeyBotState.KEYBOT_PRESSING_RIGHT}
-                onPress={() =>
-                  dispatch(keyBotCommand({ command: KeyBotCommand.KEYBOT_PRESS_LEFT }))
-                }
-
-              >
-                Unlock
-              </Button>
-
-            </View>
-            <View key="2" style={styles.page}>
-              <Avatar.Icon size={56} icon="package-variant-closed" />
-
-              <Title style={styles.title}
-              >
-                Retrieve Your Parcel from the Vehicle
-              </Title>
-
-              <Title style={styles.subtitle}>
-                Open the Vehicle, grab your parcel, then close it securely.
-              </Title>
-
-
-              <Title style={styles.subtitle}>
-                Tracking number:
-                <Title style={{ fontWeight: "bold" }}>
-                  {"\n" + parcel.trackingNumber}
-                </Title>
-              </Title>
-
-              <Button mode="contained"
-                icon="check"
-                contentStyle={{ height: 80, width: 200 }}
-                onPress={() => {
-
-
-                  if (pagerRef && pagerRef.current
-                  ) {
-                    pagerRef.current.setPage(page + 1);
-                  }
-
-
-                }}>
-                Done
-              </Button>
-            </View>
-            <View key="3" style={styles.page}>
-              <Avatar.Icon
-                size={56}
-                icon="car"
-                style={{
-                  backgroundColor:
-                    ble.keyBotState.status === KeyBotState.KEYBOT_PRESSING_LEFT || ble.keyBotState.status === KeyBotState.KEYBOT_PRESSING_RIGHT
-                      ? "yellow" : theme.colors.primary
-                }}
-              />
-              <Title style={styles.title}
-
               >Lock the Vehicle</Title>
               <Title
                 style={styles.subtitle}
@@ -584,300 +408,54 @@ export default function ConnectToTheBox() {
                 loading={ble.keyBotState.status === KeyBotState.KEYBOT_PRESSING_LEFT || ble.keyBotState.status === KeyBotState.KEYBOT_PRESSING_RIGHT}
                 disabled={ble.keyBotState.status === KeyBotState.KEYBOT_PRESSING_LEFT || ble.keyBotState.status === KeyBotState.KEYBOT_PRESSING_RIGHT}
                 onPress={() =>
-                  dispatch(keyBotCommand({ command: KeyBotCommand.KEYBOT_PRESS_RIGHT }))
+                  dispatch(keyBotCommand({ command: KeyBotCommand.KEYBOT_PRESS_RIGHT}))
                 }
 
               >
                 Lock
               </Button>
 
-
             </View>
-            <View key="4" style={styles.page}>
-              <View style={{
-                alignItems: "center", flex: 3, justifyContent: "center"
-              }}>
-                <Avatar.Icon
-                  size={56}
-                  icon="star"
-                />
-                <Title style={styles.title}>Rate the Vehicle / Box</Title>
-                <Title style={styles.subtitle}>
-                  How was the condition of the Vehicle? Was it clean and well-maintained?
-                </Title>
-              </View>
+            <View key="2" style={styles.page}>
+              <Avatar.Icon size={56} icon="car" />
+              <Title style={styles.title}
+              >End ride</Title>
+              <Title style={styles.subtitle}
+              >
+                That's it! See you next time!
 
-              <View style={{
-                flex: 1, justifyContent: "flex-end"
-              }}>
+              </Title>
+              <Button mode="contained"
+                icon="check"
+                contentStyle={{ height: 80, width: 200 }}
+                onPress={() => {
+                  console.log('End ride')
+                  endRide();
 
-                <AirbnbRating
-                  size={56}
-                  showRating={false}
-                  onFinishRating={(rating) => {
-                    setBoxRating(rating);
-                    console.log("box rating", rating);
-                  }}
-                  reviewColor={theme.colors.primary}
-                  selectedColor={theme.colors.primary}
-                  defaultRating={0}
-
-                />
-              </View>
-              <View style={{
-                flex: 1, justifyContent: "flex-end"
-              }}>
-                {boxRating > 0 ? (
-
-                  <Button mode="contained"
-                    loading={rateTransactionLoading}
-
-
-                    contentStyle={{ height: 80, width: 200 }}
-                    onPress={() => {
-                      if (rateTransactionLoading) return;
-
-                      if (pagerRef && pagerRef.current
-                      ) {
-                        pagerRef.current.setPage(page + 1);
-                      }
-
-
-                    }}>
-                    {rateTransactionLoading ? "Rating..." : "Next"}
-                  </Button>
-                ) : null}
-              </View>
-
-            </View>
-            <View key="5" style={styles.page}>
-              <View style={{
-                alignItems: "center", flex: 3, justifyContent: "center"
-              }}>
-                <Avatar.Icon
-                  size={56}
-                  icon="star"
-                />
-                <Title style={styles.title}>Rate the Courier</Title>
-                <Title style={styles.subtitle}>
-                  Did the courier arrive on time? What was the condition of the parcel?
-                </Title>
-              </View>
-
-              <View style={{
-                flex: 1, justifyContent: "flex-end"
-              }}>
-
-                <AirbnbRating
-                  size={56}
-                  showRating={false}
-                  onFinishRating={(rating) => {
-                    setCourierRating(rating);
-                    console.log("courier rating", rating);
-                  }}
-                  reviewColor={theme.colors.primary}
-                  selectedColor={theme.colors.primary}
-                  defaultRating={0}
-
-                />
-              </View>
-              <View style={{
-                flex: 1, justifyContent: "flex-end"
-              }}>
-                {courierRating > 0 ? (
-
-                  <Button mode="contained"
-                    loading={rateTransactionLoading}
-
-
-                    contentStyle={{ height: 80, width: 200 }}
-                    onPress={() => {
-                      if (rateTransactionLoading) return;
-
-                      if (pagerRef && pagerRef.current
-                      ) {
-                        pagerRef.current.setPage(page + 1);
-                      }
-
-
-                    }}>
-                    {rateTransactionLoading ? "Rating..." : "Next"}
-                  </Button>
-                ) : null}
-              </View>
-
-
-            </View>
-            <View key="6" style={styles.page_flatlist}>
-              <View style={{
-                flex: isBlockchainProcessing || isBlockchainDone ? 2 : 3,
-                alignItems: "center", justifyContent: "center", marginTop: 10
-
-
-
-
-              }}>
-                <Avatar.Icon
-                  size={isBlockchainProcessing || isBlockchainDone ? 48 : 56}
-                  icon="account-check"
-                  style={{
-                    marginTop: 10,
-                  }}
-
-                />
-                <Title style={isBlockchainProcessing || isBlockchainDone ? styles.titlesmall : styles.title}>
-                
-                  {isBlockchainProcessing
-                    ? 'Uploading Parcel Withdrawal to Blockchain'
-                    : isBlockchainDone
-                      ? 'Parcel Withdrawal Completed'
-                      : 'Confirm Parcel Withdrawal'}
-                </Title>
-
-                <Subheading
-                  style={isBlockchainProcessing || isBlockchainDone ? styles.subtitle_small : styles.subtitle}
-                  >
-                  {isBlockchainProcessing
-                    ? 'Updating NFT Metadata please wait...'
-                    : isBlockchainDone
-                      ? 'Parcel Withdrawal Completed'
-                      : 'I have withdrawn the parcel from the Vehicle and I am ready to confirm the withdrawal.'}
-                </Subheading>
-              </View>
-
-              {(isBlockchainProcessing || isBlockchainDone) ? (
-
-
-                <><View style={{
-                  flex: 4,
-                  width: "100%",
-
+                  //navigate to ride progress
+                  router.replace("/client/");
 
                 }}>
-                  <FlatList style={{ width: "100%" }}
-                    contentContainerStyle={{ flexGrow: 1, justifyContent: "flex-end" }}
-                    onScrollToIndexFailed={info => {
-                      console.log(info);
-                    }}
-                    getItemLayout={(data, index) => (
-                      { length: 100, offset: 100 * index, index }
-                    )}
+                
+                OK
+              </Button>
+              <Button 
+                icon="close"
+                style={{ marginTop: 20 }}
+                contentStyle={{ height: 80, width: 200, }}
+                onPress={() => {
+                  console.log('Cancelled parcel placement in the Vehicle')
+                  //navigate back to where we came from
+                  router.back();
 
-                    ref={flatListRef}
-                    data={steps}
-                    renderItem={renderStepCard}
-                    keyExtractor={(item, index) => index.toString()} />
-
-                </View>
-                  <View style={{
-                    flex: 1,
-                    flexDirection: 'row', justifyContent: 'space-between', marginHorizontal: 10, marginTop: 10
-                  }}>
-                    {isBlockchainDone ? (
-                      <Button
-                        mode="outlined"
-                        onPress={() => {
-                          console.log('Confirmed parcel placement in the Vehicle');
-                          Linking.openURL(explorerUrl + "/tx/" + BlockchainTransaction);
-                        }}
-                        contentStyle={{ height: 80 }}
-                        style={{
-                          marginRight: 10
-                          , flex: 1
-                        }}>
-                        View on Blockchain
-                      </Button>
-                    ) : null}
-
-                    <Button
-                      mode="contained"
-                      loading={isBlockchainProcessing}
-                      onPress={() => {
-                        if (isBlockchainProcessing) return;
-
-                        if (isBlockchainDone) {
-                          router.back();
-
-                          return;
-                        }
-
-
-                      }}
-
-                      contentStyle={{
-                        height: 80
-
-                      }}
-                      style={{
-                        flex: 1
-                      }}
-
-
-
-                    >
-
-
-                      {isBlockchainProcessing ?
-                        steps[activeStep]
-                        : isBlockchainDone ? 'Finish' : 'Approve'}
-                    </Button>
-                  </View></>
-
-              ) : (
-                <>
-                  <View style={{
-                    flex: 1,
-                    justifyContent: "center",
-                    alignItems: "center",
-                  }}>
-
-                    <Button
-                      mode="contained"
-                      loading={isBlockchainProcessing}
-                      onPress={() => {
-                        if (isBlockchainProcessing) return;
-
-                        if (isBlockchainDone) {
-                          router.back();
-
-                          return;
-                        }
-
-                        setIsBlockchainProcessing(true);
-                        blockchain(
-                          boxDetails,
-                          parcel,
-                          {
-                            latitude: location.coords.latitude,
-                            longitude: location.coords.longitude,
-                            inaccuracy: location.coords.accuracy,
-                          } as PreciseLocation
-                        );
-                      }}
-
-                      contentStyle={{
-                        height: 80, width: 200
-                      }}
-
-                      style={{
-
-
-
-
-
-                      }}
-                    >
-
-
-                      Approve
-                    </Button>
-                  </View>
-                </>
-
-              )}
-
+                }}>
+                Cancel
+              </Button>
 
             </View>
+            
+            
+         
 
           </PagerView>
         ) : (
@@ -893,7 +471,7 @@ export default function ConnectToTheBox() {
         <Animated.View
           entering={FadeInDown.delay(200).duration(1000).springify()}
         >
-          <ScreenIndicators count={7} activeIndex={page} />
+          <ScreenIndicators count={3} activeIndex={page} />
         </Animated.View>
 
       </View>
@@ -920,11 +498,11 @@ const styles = StyleSheet.create({
   },
   title: {
     textAlign: "center", marginBottom: 10, //bold
-    fontWeight: "bold", fontSize: 22, marginTop: 20, marginHorizontal: 10
+    fontWeight: "bold", fontSize: 22, marginTop: 20
   },
   titlesmall: {
-    textAlign: "center", marginBottom: 5, //bold
-    fontWeight: "bold", marginTop: 10,marginHorizontal: 10
+    textAlign: "center", marginBottom: 0, //bold
+    fontWeight: "bold", marginTop: 0
   },
   subtitle: {
     textAlign: "center", marginBottom: 40, marginHorizontal: 30
@@ -932,6 +510,7 @@ const styles = StyleSheet.create({
   subtitle_small: {
     textAlign: "center", marginBottom: 10, marginHorizontal: 30
   },
+
 
 
 });
