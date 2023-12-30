@@ -6,14 +6,18 @@ import { useLocalSearchParams, useNavigation, useRouter } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
 import { Image, ScrollView, StyleSheet } from 'react-native';
 import MapView, { Marker } from 'react-native-maps';
-import { Button, IconButton, TextInput, useTheme } from 'react-native-paper';
+import { Button, Divider, IconButton, TextInput, Title, useTheme } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Switch from 'react-native-switch-toggles';
-import { Text, View } from '../../../../components/Themed';
+import { Text, View, getTheme } from '../../../../components/Themed';
 import { BoxStatus } from '../../../../constants/Auth';
 import { Box, PreciseLocation, UpdateBoxDto, getErrorMessage, useLazyGetBoxQuery, useSetBoxPreciseLocationMutation, useUpdateBoxMutation } from '../../../../data/api';
 import { uploadToFirebase } from "../../../../firebaseConfig";
 import firestore from '@react-native-firebase/firestore';
+import { get } from 'react-native/Libraries/TurboModule/TurboModuleRegistry';
+import Icon from 'react-native-paper/lib/typescript/src/components/Icon';
+import { useAuth } from '../../../../auth/provider';
+import database from '@react-native-firebase/database';
 
 
 export default function KeyBotDetails() {
@@ -24,13 +28,14 @@ export default function KeyBotDetails() {
   const navigation = useNavigation();
 
 
+
   // const [getBoxDetails, { isLoading, data: initialBoxDetails, isFetching, isSuccess }] = useLazyGetBoxQuery();
 
   // const [updateBox, { isLoading: isUpdating }] = useUpdateBoxMutation();
   // const [setBoxPreciseLocation, { isLoading: isSettingLocation }] = useSetBoxPreciseLocationMutation();
 
 
-  const [BoxDetails, setBoxDetails] = useState<any | undefined>(undefined);
+  const [Car, setBoxDetails] = useState<any | undefined>(undefined);
   const [initialBoxDetails, setInitialBoxDetails] = useState<any | undefined>(undefined);
   //isUpdating
   const [isUpdating, setIsUpdating] = useState(false);
@@ -55,7 +60,8 @@ export default function KeyBotDetails() {
 
   const isFirstRender = useRef(true);
   const mapRef = React.useRef<MapView>(null);
-
+  const textColor = getTheme().text;
+  const { user } = useAuth();
 
 
 
@@ -69,7 +75,7 @@ export default function KeyBotDetails() {
     //ceck permission
     if (permission?.status !== ImagePicker.PermissionStatus.GRANTED) {
       requestPermission();
-     
+
     }
     if (libpermission?.status !== ImagePicker.PermissionStatus.GRANTED) {
       requestLibPermission();
@@ -96,8 +102,8 @@ export default function KeyBotDetails() {
         console.log(`Upload progress: ${progress}%`);
       });
 
-      if (BoxDetails) {
-        setBoxDetails({ ...BoxDetails, imageURL: uploadedImage.downloadUrl });
+      if (Car) {
+        setBoxDetails({ ...Car, imageURL: uploadedImage.downloadUrl });
         console.log("set imageUrl", uploadedImage.downloadUrl);
 
       }
@@ -119,12 +125,12 @@ export default function KeyBotDetails() {
         const car_details = await firestore().collection('Cars').doc(id).get();
 
         
+
+
         console.log("car_details", car_details.data());
 
-        setBoxDetails(car_details.data());
-        setInitialBoxDetails(car_details.data());
+        setBoxDetails({ ...car_details.data(), id: id });
 
-        setIsEnabled(car_details.data().availability);
 
         console.log("set license plate", car_details.data().licensePlate);
         console.log("set imageUrl", car_details.data().imageURL);
@@ -171,17 +177,17 @@ export default function KeyBotDetails() {
       setLicensePlateError('Invalid license plate');
     } else {
       setLicensePlateError('');
-      if (BoxDetails) {
-        setBoxDetails({ ...BoxDetails, licensePlate: text });
+      if (Car) {
+        setBoxDetails({ ...Car, licensePlate: text });
       }
     }
   }
 
-  
+
 
   const handleDetailsChange = (text: string) => {
-    if (BoxDetails) {
-      setBoxDetails({ ...BoxDetails, description: text });
+    if (Car) {
+      setBoxDetails({ ...Car, description: text });
     }
   }
 
@@ -248,91 +254,169 @@ export default function KeyBotDetails() {
 
 
 
-  const updateBoxDetailsAndNavigate = async () => {
-    try {
-      if (BoxDetails) {
-
-        //check for location change
-        if (
-          (!initialBoxDetails?.location && BoxDetails?.location) ||
-          (initialBoxDetails?.location &&
-            (initialBoxDetails.location.latitude !==
-              BoxDetails?.location?.latitude ||
-              initialBoxDetails.location.longitude !==
-              BoxDetails?.location?.longitude))
-        ) {
-          console.log("location changed");
-          const newLocation  = { latitude: BoxDetails?.location.latitude, longitude: BoxDetails?.location.longitude };
-
-
-          //
-          // const updated_location = await setBoxPreciseLocation({
-          //   boxId: BoxDetails?.id,
-          //   preciseLocation: newLocation,
-          //   update: BoxDetails?.location ? true : false
-          // }).unwrap();
-
-          //firebase update
-          const updated_location = await firestore().collection('Cars').doc(id).update({ location: newLocation });
 
 
 
 
+  function distance(loc1, loc2) {
+    const R = 6371e3; // metres
+    const φ1 = loc1.latitude * Math.PI / 180; // φ, λ in radians
+    const φ2 = loc2.latitude * Math.PI / 180;
+    const Δφ = (loc2.latitude - loc1.latitude) * Math.PI / 180;
+    const Δλ = (loc2.longitude - loc1.longitude) * Math.PI / 180;
 
-          console.log("updated_location", updated_location);
-        }
+    const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
+      Math.cos(φ1) * Math.cos(φ2) *
+      Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
 
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 
-
-
-        let updatedBoxDetails: UpdateBoxDto = {
-          ...BoxDetails
-
-        };
-
-
-        // const updatedBox = await updateBox(updatedBoxDetails).unwrap();
-
-        //firebase update
-        const updatedBox = await firestore().collection('Cars').doc(id).update(updatedBoxDetails);
+    const d = R * c; // in metres
 
 
-        console.log("updatedBox", updatedBox);
-        setVisible(false);
-        if (navigation.canGoBack()) {
-          navigation.goBack();
-        } else {
-          console.log("Can't go back");
-        }
 
+    return d;
+  }
+
+  const getDistance = (car) => {
+    if (location && location.coords && car && car.location) {
+      let d = distance(location.coords, car.location);
+
+      let formattedDistance;
+      if (d < 1000) {
+        formattedDistance = d.toFixed(2) + "m";
       } else {
-        console.log("BoxDetails is undefined");
-      }
-    } catch (err) {
-      console.error("Failed to update box:", err);
-    }
-  };
-
-  useEffect(() => {
-    console.log("isEnabled", isEnabled);
-    if (BoxDetails) {
-      const isBoxDetailsFilled = BoxDetails?.licensePlate !== "" && BoxDetails?.imageURL !== "" && BoxDetails?.location !== null;
-      console.log("isBoxDetailsFilled", isBoxDetailsFilled);
-      if (!isBoxDetailsFilled && isEnabled) {
-        console.log("seting switch to false");
-        setBoxDetails({ ...BoxDetails, availability: false });
-        setIsEnabled(false);
-      } else {
-        console.log("seting switch to x");
-        setBoxDetails({ ...BoxDetails, availability: isEnabled ? true : false });
-        setIsEnabled(isEnabled);
-
+        formattedDistance = (d / 1000).toFixed(2) + "km";
       }
 
-
+      return {
+        formattedDistance,
+        rawDistance: d
+      };
     }
+    return {
+      formattedDistance: "N/A",
+      rawDistance: 0
+    };
+  }
+//funct for booking
+const rideCar = async (car) => {
+  console.log("rideCar", car);
+  try {
+    const carRef = firestore().collection('Cars').doc(car.id);
+    await firestore().runTransaction(async transaction => {
+      const carDoc = await transaction.get(carRef);
+      if (!carDoc.exists) {
+        throw 'Car does not exist!';
+      }
 
-  }, [isEnabled]);
+      //create a new ride object in realtime database
+
+      //         rideId: String (unique identifier)
+      // userId: String (Reference to users/userId)
+      // driverId: String (Reference to drivers/driverId)
+      // carId: String (Reference to cars/carId)
+      // fleetId: String (Reference to fleets/fleetId)
+      // startLocation: Object
+      // latitude: Float
+      // longitude: Float
+      // endLocation: Object
+      // latitude: Float
+      // longitude: Float
+      // startTime: Timestamp
+      // endTime: Timestamp
+      // status: Enum ('Requested', 'Ongoing', 'Completed', 'Canceled')
+      // cost: Float
+      // distance: Float (in miles or km)
+      // route: Array of Objects
+      // latitude: Float
+      // longitude: Float
+      // keybotId: String (Reference to keybots/keybotId)
+      // accessKey: String
+
+      //realtime database
+
+
+      //get keybot details note keybotId is reference  KeyBots/ETq5y9pE5irNlAxEitZF
+      const keybotRef = await carRef.get();
+      const keybotId = await keybotRef.data().keybotId.get().then(doc => doc.id);
+      console.log("keybot", keybotId);
+
+      const fleetId = await carRef.get().then(doc => doc.data().fleetId.get().then(doc => doc.id));
+
+      console.log("fleetId", fleetId);
+
+
+
+
+      const newRide = {
+        inprogress: false,
+        userId: user.uid,
+        carId: car.id,
+        fleetId: fleetId,
+        startLocation: {
+          latitude: location.coords.latitude,
+          longitude: location.coords.longitude,
+        },
+        endLocation: {
+          latitude: 0,
+          longitude: 0,
+        },
+        currentLocation: {
+          latitude: location.coords.latitude,
+          longitude: location.coords.longitude,
+        },
+        createdAt: firestore.Timestamp.now(),
+        startTime: 0,
+        endTime: 0,
+        status: "Initialised",
+        cost: 0,
+        distance: 0,
+        keybotId: keybotId
+      };
+
+      console.log("newRide", newRide);
+
+      //create a new ride object in realtime database
+
+      const rideRef = database().ref('Rides').push();
+      await rideRef.set(newRide).then(() => {
+        console.log('Ride added!');
+      });
+
+
+      if (carDoc.data()?.current_userId === null || carDoc.data()?.current_userId === undefined) {
+        transaction.update(carRef, {
+          current_userId: user.uid,
+          current_rideId: rideRef.key,
+          status: 'In use',
+
+        });
+
+
+        //open start ride page
+        router.push("ride/" + rideRef.key + "/start");
+
+
+
+
+
+
+     
+  
+
+
+
+      } else {
+        console.log("Car is not available!", carDoc.data());
+        throw 'Car is not available!';
+      }
+    });
+  } catch (e) {
+    console.log(e);
+    alert("Error booking a car: " + e);
+  }
+};
 
 
 
@@ -341,48 +425,136 @@ export default function KeyBotDetails() {
 
     <View style={styles.container}>
 
+
+
       <ScrollView contentContainerStyle={styles.scrollViewContainer}>
+
+
+
 
         <View style={styles.imageContainer}>
           {
-            BoxDetails?.imageURL ? (
-              <Image source={{ uri: BoxDetails.imageURL }} style={styles.image} />
+            Car?.imageURL ? (
+              <Image source={{ uri: Car.imageURL }} style={styles.image} />
             ) : (
               <Text>No image uploaded</Text>
             )
           }
 
+        </View>
+
+        <View style={{
+          flexDirection: 'row', justifyContent: 'space-between', marginVertical: 10
+
+        }}>
+          <View style={{ flexDirection: 'column', justifyContent: 'center', alignItems: 'flex-start' }}>
 
 
-          <IconButton
+            <Title
+              style={{
+                fontSize: 30, fontWeight: "800", color: textColor,
+                borderRadius: 30,
+                marginLeft: 10,
+
+              }}
+            >
+              {Car?.make} {Car?.model}
+            </Title>
+            <Text
+              style={{
+                fontSize: 20, fontWeight: "800", color: textColor, marginLeft: 10, borderRadius: 30,
+              }}
+            >
+              {Car?.year}
+            </Text>
+
+          </View>
+
+
+
+          <Button
             style={{
-              ...styles.overlayText,
-              backgroundColor: theme.colors.background,
+              marginRight: 10,
+              justifyContent: 'center',
+              alignItems: 'center',
             }}
-            icon="image-edit-outline"
-            // iconColor={theme.colors.primary}
-            size={32}
-            onPress={handleUploadImage}
-            disabled={isUploading}
-          />
+
+            disabled={getDistance(Car).rawDistance > 1000}
+
+            contentStyle={{ height: 60, width: 120 }}
+            mode='contained'
+            icon='car'
+            onPress={() => {
+              rideCar(Car)
+            }}>
+            Unlock
+          </Button>
+
+
+
+
+
 
         </View>
 
-        {BoxDetails?.location?.latitude && BoxDetails?.location?.longitude ? (
+
+
+        <Divider  />
+
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginVertical: 10 }}>
+          <Text
+
+            style={{
+              fontSize: 20, fontWeight: "600", color: textColor, marginLeft: 10, borderRadius: 30,
+            }}
+
+          >
+
+            {
+              getDistance(Car).rawDistance < 1000 ? (
+                <Text style={{ textAlign: 'center' }}
+
+                > {getDistance(Car).formattedDistance} away</Text>
+              ) : (
+                <Text style={{ textAlign: 'center' }}
+
+                >{getDistance(Car).formattedDistance} away please move closer to unlock</Text>
+              )
+
+            }
+
+
+
+          </Text>
+
+        </View>
+
+
+
+
+
+
+
+
+
+
+
+
+        {Car?.location?.latitude && Car?.location?.longitude ? (
           <MapView
             style={styles.map}
             ref={mapRef}
             initialRegion={{
-              latitude: BoxDetails?.location?.latitude,
-              longitude: BoxDetails?.location?.longitude,
+              latitude: Car?.location?.latitude,
+              longitude: Car?.location?.longitude,
               latitudeDelta: 0.0922,
               longitudeDelta: 0.0421
             }}
             camera={
               {
                 center: {
-                  latitude: BoxDetails?.location?.latitude,
-                  longitude: BoxDetails?.location?.longitude,
+                  latitude: Car?.location?.latitude,
+                  longitude: Car?.location?.longitude,
                 },
                 zoom: 18,
                 pitch: 0,
@@ -399,8 +571,8 @@ export default function KeyBotDetails() {
           >
             <Marker
               coordinate={{
-                latitude: BoxDetails?.location?.latitude,
-                longitude: BoxDetails?.location?.longitude,
+                latitude: Car?.location?.latitude,
+                longitude: Car?.location?.longitude,
               }}
             />
           </MapView>
@@ -409,104 +581,63 @@ export default function KeyBotDetails() {
             ...styles.map, textAlign: 'center'
 
           }}>
-            No location set, please set box location.
+            No location set
           </Text>
         )}
 
-
-        {/* <Paragraph style={styles.address}>Address: {address == "" ? "Loading..." : address}</Paragraph> */}
-        <View style={styles.updateLocationContainer}>
-          <Button style={styles.updateLocationButton}
-            contentStyle={{ height: 50 }}
-            mode="contained"
-            loading={isUpdating}
-            onPress={() => {
-              if (location && location.coords && location?.coords.latitude && location?.coords.longitude && location?.coords.accuracy && BoxDetails) {
-                setBoxDetails({
-                  ...BoxDetails, location: {
-                    latitude: location?.coords.latitude,
-                    longitude: location?.coords.longitude,
-                  }
-                });
-
-                if (mapRef.current) {
-                  mapRef.current.animateCamera({
-                    center: {
-                      latitude: location?.coords.latitude,
-                      longitude: location?.coords.longitude,
-                    },
-                    zoom: 18,
-                  });
-                }
-              }
-            }
-            }
+        <Divider style={{ margin: 10 }} />
 
 
+        {
+          Car?.description ? (
 
-          >
-            {BoxDetails?.location?.latitude && BoxDetails?.location?.longitude ? "Update Location" : "Set Location"}
-          </Button>
-        </View>
-        <View style={styles.inputContainer}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginVertical: 10 }}>
+              <Text
 
+                style={{
+                  fontSize: 20, fontWeight: "600", color: textColor, marginLeft: 10, borderRadius: 30,
+                }}
 
-          <TextInput
-            label="License Plate"
-            value={BoxDetails?.licensePlate}
-            mode='outlined'
-            placeholder='XX1234567'
-            onChangeText={handleLicensePlateChange}
+              >
+                {Car?.description}
 
-            style={styles.licensePlateInput}
-            autoCapitalize='characters'
-          />
+              </Text>
+            </View>
 
-          <TextInput
-            label="Description"
-            value={BoxDetails?.description}
-            mode='outlined'
-            placeholder='Enter more details here...'
-            onChangeText={handleDetailsChange}
-            style={styles.detailsInput}
-            multiline
-          />
+          ) : null
+        }
+
+        <Divider style={{ marginTop: 10 }} />
 
 
-          {licensePlateError ? <Text style={styles.errorText}>{licensePlateError}</Text> : null}
-          
+        <View style={{ flexDirection: 'row', justifyContent: 'space-evenly' }}>
+          <View style={{ alignItems: 'center' }}>
+            <IconButton icon="door" size={35} />
+            <Text style={styles.specsText}
+            >{Car?.specs?.doors
+              } Doors</Text>
+          </View>
+          <View style={{ alignItems: 'center' }}>
+            <IconButton icon="seat" size={35} />
+            <Text style={styles.specsText}
 
+            >{Car?.specs?.seats
+              } Seats</Text>
+          </View>
+          <View style={{ alignItems: 'center' }}>
+            <IconButton icon="car" size={35} />
+            <Text style={styles.specsText}
 
-          <View style={styles.switchContainer}>
-            <Text style={styles.switchLabel}>Status:</Text>
-            <Switch
-
-              size={60}
-              value={isEnabled}
-              onChange={(value) => {
-                console.log("switch value", value);
-                setIsEnabled(value);
-              }
-              }
-
-
-              activeTrackColor={theme.colors.primary}
-              renderOffIndicator={() => <Text style={{ fontSize: 14, color: theme.colors.secondary }}>Not Ready</Text>}
-              renderOnIndicator={() => <Text style={{ fontSize: 14, color: theme.colors.onPrimary }}>Ready
-              </Text>}
-            />
+            >{Car?.specs?.transmission
+              }</Text>
           </View>
         </View>
-        <Button
-          style={styles.saveButtons}
-          contentStyle={{ height: 50 }}
-          mode="contained"
-          loading={isUpdating}
-          onPress={updateBoxDetailsAndNavigate}
-          disabled={!BoxDetails || !initialBoxDetails || !haveBoxDetailsChanged(BoxDetails, initialBoxDetails)}
-        >
-          Save
-        </Button>
+
+
+
+
+
+
 
       </ScrollView>
 
@@ -524,6 +655,13 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
 
 
+  },
+
+  specsText: {
+    fontSize: 15,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    marginTop: -10,
   },
   imageContainer: {
     alignItems: 'center',

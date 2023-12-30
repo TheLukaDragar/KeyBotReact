@@ -13,6 +13,7 @@ import React from 'react';
 import MapView, { Callout, Marker } from 'react-native-maps';
 import Animated, { FadeIn, FadeInDown, FadeInUp } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { requestPermissionsExport } from '../../../ble/bleSlice';
 
 
 const PAGE_SIZE = 10;  // Number of documents to fetch in a single request
@@ -49,6 +50,11 @@ export default function CarsInfiniteScroll() {
     if (startAfter) {
       console.log("startingAfter", startAfter.data().model);
       query = query.startAfter(startAfter);
+    }
+
+    const granted = await new Promise(resolve => requestPermissionsExport(resolve));
+    if (!granted) {
+        throw new Error('Ble permission not granted');
     }
 
 
@@ -550,7 +556,7 @@ export default function CarsInfiniteScroll() {
                           onPress={() => {
                             rideCar(selectedCar);
                           }}>
-                          Ride
+                          Choose
                         </Button>
                       </Card.Actions>
                     </View>
@@ -636,9 +642,11 @@ export default function CarsInfiniteScroll() {
                     icon='car'
                     disabled={(item.current_userId !== null && item.current_userId !== undefined) || inUseCar !== null}
                     onPress={() => {
-                      rideCar(item);
+                      setSelectedCar(item);
+                      router.push("/client/cars/" + item.id);
+                      // rideCar(item);
                     }}>
-                    Ride
+                    Choose
                   </Button>
 
                   {item.id === inUseCar?.id ? (

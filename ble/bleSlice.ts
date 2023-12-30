@@ -835,3 +835,6 @@ export const selectAdapterState = (state: RootState) => state.ble.adapterState;
 export const selectConnectedDevice = (state: RootState) => state.ble.connectedDevice;
 export const selectScannedDevices = (state: RootState) => state.ble.deviceScan;
 export const selectBle = (state: RootState) => state.ble;
+//requestPermissions export
+export const requestPermissionsExport = requestPermissions;
+
