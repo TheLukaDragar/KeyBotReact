@@ -18,6 +18,7 @@ import { get } from 'react-native/Libraries/TurboModule/TurboModuleRegistry';
 import Icon from 'react-native-paper/lib/typescript/src/components/Icon';
 import { useAuth } from '../../../../auth/provider';
 import database from '@react-native-firebase/database';
+import { getLocation } from '../../../../utils/getlocation';
 
 
 export default function KeyBotDetails() {
@@ -164,7 +165,7 @@ export default function KeyBotDetails() {
         return;
       }
 
-      let location = await Location.getCurrentPositionAsync({});
+      let location = await getLocation()
       setLocation(location);
     })();
     get_car_details()

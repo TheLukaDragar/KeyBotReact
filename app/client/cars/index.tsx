@@ -15,6 +15,7 @@ import Animated, { FadeIn, FadeInDown, FadeInUp } from 'react-native-reanimated'
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { requestPermissionsExport } from '../../../ble/bleSlice';
 
+import { getLocation } from '../../../utils/getlocation';
 
 const PAGE_SIZE = 10;  // Number of documents to fetch in a single request
 
@@ -224,7 +225,7 @@ export default function CarsInfiniteScroll() {
         return;
       }
 
-      let location = await Location.getCurrentPositionAsync({});
+      let location = await getLocation();
       setLocation(location);
     })();
 

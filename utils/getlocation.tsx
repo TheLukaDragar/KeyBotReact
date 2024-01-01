@@ -1,6 +1,10 @@
 import { getCurrentPositionAsync, LocationAccuracy, LocationObject } from 'expo-location'
 import { Platform } from 'react-native'
 
+let cachedLocation: LocationObject | null = null
+let cacheTimestamp: number | null = null
+const CACHE_DURATION = 5 * 60 * 1000 // 5 minutes in milliseconds
+
 function delay(timeInMilliseconds: number) {
     return new Promise<null>((resolve) => {
         setTimeout(() => resolve(null), timeInMilliseconds)
@@ -8,8 +12,8 @@ function delay(timeInMilliseconds: number) {
 }
 
 export async function getLocation() {
-    const ANDROID_DELAY_IN_MS = 4 * 1000 // 👈 4s
-    const IOS_DELAY_IN_MS = 15 * 1000 // 👈 15s
+    const ANDROID_DELAY_IN_MS = 4 * 1000 // 4s
+    const IOS_DELAY_IN_MS = 15 * 1000 // 15s
 
     const DELAY_IN_MS =
         Platform.OS === 'ios' ? IOS_DELAY_IN_MS : ANDROID_DELAY_IN_MS
@@ -17,8 +21,11 @@ export async function getLocation() {
     const MAX_TRIES = 5
     let tries = 1
 
-    let location: LocationObject | null = null
+    if (cachedLocation && cacheTimestamp && Date.now() - cacheTimestamp < CACHE_DURATION) {
+        return cachedLocation
+    }
 
+    let location: LocationObject | null = null
     let locationError: Error | null = null
 
     do {
@@ -32,23 +39,28 @@ export async function getLocation() {
             ])
 
             if (!location) {
-               
                 throw new Error('Timeout')
-               
             }
         } catch (err) {
             locationError = err as Error
         } finally {
-            tries += 1;
+            tries += 1
         }
     } while (!location && tries <= MAX_TRIES)
 
     if (!location) {
         alert('Unable to get location. Please try again later.')
         const error = locationError ?? new Error('💣')
-
         throw error
     }
+
+    cachedLocation = location
+    cacheTimestamp = Date.now()
+
+    setTimeout(() => {
+        cachedLocation = null
+        cacheTimestamp = null
+    }, CACHE_DURATION)
 
     return location
 }
