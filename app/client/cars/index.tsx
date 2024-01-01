@@ -501,7 +501,9 @@ export default function CarsInfiniteScroll() {
 
             <>
               {selectedCar ? (
-                <Animated.View  style={{
+                <Animated.View  entering={FadeInDown.duration(1000).springify()}
+                
+                style={{
                   position: 'absolute',
                   left: 0,
                   right: 0,
@@ -513,10 +515,10 @@ export default function CarsInfiniteScroll() {
                   marginTop: 12,
 
                 }}
+                 
                 >
                   <Card style={[styles.card, {
-                    margin: 0
-
+                    margin: 0,
                   }
 
                   ]}
@@ -555,7 +557,8 @@ export default function CarsInfiniteScroll() {
                           mode='contained'
                           icon='car'
                           onPress={() => {
-                            rideCar(selectedCar);
+                            setSelectedCar(selectedCar);
+                            router.push("/client/cars/" + selectedCar.id);
                           }}>
                           Choose
                         </Button>

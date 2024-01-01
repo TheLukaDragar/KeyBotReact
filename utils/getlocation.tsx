@@ -3,7 +3,7 @@ import { Platform } from 'react-native'
 
 let cachedLocation: LocationObject | null = null
 let cacheTimestamp: number | null = null
-const CACHE_DURATION = 5 * 60 * 1000 // 5 minutes in milliseconds
+const CACHE_DURATION = 3 * 60 * 1000 // 5 minutes in milliseconds
 
 function delay(timeInMilliseconds: number) {
     return new Promise<null>((resolve) => {

@@ -7,68 +7,59 @@ import { useRouter } from 'expo-router';
 import database from '@react-native-firebase/database';
 import { useAuth } from '../../../auth/provider';
 
-const PAGE_SIZE = 3;  // Number of documents to fetch in a single request
+const PAGE_SIZE = 10;  // Number of documents to fetch in a single request
 
 export default function CarsInfiniteScroll() {
-  const [cars, setCars] = useState([]);
-  const [lastVisible, setLastVisible] = useState(null);
+  const [cars, setCars] = useState<any[]>([]);
+  const [lastVisible, setLastVisible] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [moreDataAvailable, setMoreDataAvailable] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [error, setError] = useState(null);
-  const loadingRef = useRef(loading);
-  loadingRef.current = loading;
   const { user } = useAuth();
-
-
   const router = useRouter();
 
-  const fetchCars = async (startAfter) => {
+  const fetchCars = async (startAfter: any) => {
     console.log("fetching rides");
-    let ridesRef = database().ref('Rides').orderByChild('userId').equalTo(user.uid);
-  
+    let ridesRef = database().ref('Rides').orderByChild('userId').equalTo(user?.uid || '').limitToFirst(PAGE_SIZE);
+
     ridesRef.on('value', snapshot => {
       console.log("snapshot", snapshot.numChildren());
-      const ridesArray = [];
-      snapshot.forEach(childSnapshot => {
+      const ridesArray: any[] = [];
+      snapshot.forEach((childSnapshot: any) => {
         ridesArray.push({
           id: childSnapshot.key,
           ...childSnapshot.val()
         });
       });
-  
-      if(ridesArray.length < PAGE_SIZE){
+
+      if (ridesArray.length < PAGE_SIZE) {
         setMoreDataAvailable(false);
       }
       console.log("ridesArray", ridesArray);
       setCars(ridesArray);
-      
-      if(ridesArray.length > 0) {
+
+      if (ridesArray.length > 0) {
         setLastVisible(ridesArray[ridesArray.length - 1]);
         console.log("set lastVisible", ridesArray[ridesArray.length - 1].model);
       }
     });
   };
-  
+
 
   const loadMoreCars = useCallback(async () => {
-    
+
     try {
 
-      console.log("loadMoreCars", loadingRef.current, moreDataAvailable);
-      // console.log("loadMoreCars", loading, moreDataAvailable);
-      if (loadingRef.current || !moreDataAvailable) return;
+      console.log("loadMoreCars", loading, moreDataAvailable);
+      if (loading || !moreDataAvailable) return;
 
       setLoading(true);
 
       console.log("loadMoreCars");
 
-      const newCars = await fetchCars(lastVisible);
-      // setCars(prevCars => [...prevCars, ...newCars]);
-      // setLastVisible(newCars[newCars.length - 1]);
-      // console.log("setLastVisible", newCars[newCars.length - 1], newCars.length);
-      
-    } catch (e) {
+      await fetchCars(lastVisible);
+
+    } catch (e: any) {
       setError(e.message);
       alert("Error loading more cars: " + e.message);
     } finally {
@@ -81,11 +72,10 @@ export default function CarsInfiniteScroll() {
       setRefreshing(true);
       setLastVisible(null);
 
-      const newCars = await fetchCars();
-      setCars(newCars);
+      await fetchCars(null);
       setMoreDataAvailable(true);
-      
-    } catch (e) {
+
+    } catch (e: any) {
       setError(e.message);
       alert("Error refreshing cars: " + e.message);
     } finally {
@@ -95,20 +85,18 @@ export default function CarsInfiniteScroll() {
 
   const fetchInitialCars = async () => {
     // This function only fetches the initial set of cars
-    const newCars = await fetchCars();
-    // console.log(newCars);
-    setCars(newCars);
+    await fetchCars(null);
   };
 
-  const firestoreTimestampToDate = (timestamp) => {
-    console.log("timestamp", timestamp);
+  const firestoreTimestampToDate = (timestamp: any) => {
     return new Date(timestamp._seconds * 1000);
-};
+  };
 
   useEffect(() => {
     fetchInitialCars();
-    
+
   }, []);
+
 
 
   return (

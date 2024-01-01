@@ -396,7 +396,7 @@ const rideCar = async (car) => {
 
 
         //open start ride page
-        router.push("ride/" + rideRef.key + "/start");
+        router.replace("ride/" + rideRef.key + "/start");
 
 
 
@@ -480,7 +480,7 @@ const rideCar = async (car) => {
               alignItems: 'center',
             }}
 
-            disabled={getDistance(Car).rawDistance > 1000}
+            // disabled={getDistance(Car).rawDistance > 1000 }
 
             contentStyle={{ height: 60, width: 120 }}
             mode='contained'
