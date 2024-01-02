@@ -7,6 +7,8 @@ export default function Profile() {
 
   const { user } = useAuth();
 
+  console.log(user);
+
 
 
   if (user) {
@@ -26,6 +28,11 @@ export default function Profile() {
           <Caption>Email: {user.email || 'not provided'}</Caption>
 
           <Divider style={styles.divider} />
+
+          <Caption>
+            {JSON.stringify(user)}
+
+          </Caption>
 
 
 

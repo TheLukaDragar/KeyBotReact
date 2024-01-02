@@ -151,7 +151,7 @@ export default function RootLayout(): ReactNode {
                     <Stack.Screen name="client"
                       options={{
                         title: "Courier",
-                        animation: "slide_from_right"
+                        animation: "none"
                       }}
                     />
 

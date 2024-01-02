@@ -1,4 +1,5 @@
-import Slider from '@react-native-community/slider';
+import database from '@react-native-firebase/database';
+import firestore from '@react-native-firebase/firestore';
 import * as ImagePicker from 'expo-image-picker';
 import * as Location from 'expo-location';
 import { LocationObject } from 'expo-location';
@@ -6,18 +7,12 @@ import { useLocalSearchParams, useNavigation, useRouter } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
 import { Image, ScrollView, StyleSheet } from 'react-native';
 import MapView, { Marker } from 'react-native-maps';
-import { Button, Divider, IconButton, TextInput, Title, useTheme } from 'react-native-paper';
+import { Button, Divider, IconButton, Title, useTheme } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Switch from 'react-native-switch-toggles';
-import { Text, View, getTheme } from '../../../../components/Themed';
-import { BoxStatus } from '../../../../constants/Auth';
-import { Box, PreciseLocation, UpdateBoxDto, getErrorMessage, useLazyGetBoxQuery, useSetBoxPreciseLocationMutation, useUpdateBoxMutation } from '../../../../data/api';
-import { uploadToFirebase } from "../../../../firebaseConfig";
-import firestore from '@react-native-firebase/firestore';
-import { get } from 'react-native/Libraries/TurboModule/TurboModuleRegistry';
-import Icon from 'react-native-paper/lib/typescript/src/components/Icon';
 import { useAuth } from '../../../../auth/provider';
-import database from '@react-native-firebase/database';
+import { Text, View, getTheme } from '../../../../components/Themed';
+import { Box, getErrorMessage } from '../../../../data/api';
+import { uploadToFirebase } from "../../../../firebaseConfig";
 import { getLocation } from '../../../../utils/getlocation';
 
 
@@ -63,6 +58,9 @@ export default function KeyBotDetails() {
   const mapRef = React.useRef<MapView>(null);
   const textColor = getTheme().text;
   const { user } = useAuth();
+
+
+  const [favouriteCars, setFavouriteCars] = useState<any[]>([]);
 
 
 
@@ -123,12 +121,22 @@ export default function KeyBotDetails() {
   useEffect(() => {
     async function get_car_details() {
       try {
+
+        //set favourite cars from user.favouriteCars
+        let favouriteCars = await firestore().collection('Users').doc(user.uid).get().then(doc => doc.data().favourite_cars);
+        setFavouriteCars(favouriteCars);
+
+
+        console.log("favouriteCars", favouriteCars);
+
+
+
         const car_details = await firestore().collection('Cars').doc(id).get();
 
-        
 
 
-        console.log("car_details", car_details.data());
+
+        // console.log("car_details", car_details.data());
 
         setBoxDetails({ ...car_details.data(), id: id });
 
@@ -300,124 +308,124 @@ export default function KeyBotDetails() {
       rawDistance: 0
     };
   }
-//funct for booking
-const rideCar = async (car) => {
-  console.log("rideCar", car);
-  try {
-    const carRef = firestore().collection('Cars').doc(car.id);
-    await firestore().runTransaction(async transaction => {
-      const carDoc = await transaction.get(carRef);
-      if (!carDoc.exists) {
-        throw 'Car does not exist!';
-      }
+  //funct for booking
+  const rideCar = async (car) => {
+    console.log("rideCar", car);
+    try {
+      const carRef = firestore().collection('Cars').doc(car.id);
+      await firestore().runTransaction(async transaction => {
+        const carDoc = await transaction.get(carRef);
+        if (!carDoc.exists) {
+          throw 'Car does not exist!';
+        }
 
-      //create a new ride object in realtime database
+        //create a new ride object in realtime database
 
-      //         rideId: String (unique identifier)
-      // userId: String (Reference to users/userId)
-      // driverId: String (Reference to drivers/driverId)
-      // carId: String (Reference to cars/carId)
-      // fleetId: String (Reference to fleets/fleetId)
-      // startLocation: Object
-      // latitude: Float
-      // longitude: Float
-      // endLocation: Object
-      // latitude: Float
-      // longitude: Float
-      // startTime: Timestamp
-      // endTime: Timestamp
-      // status: Enum ('Requested', 'Ongoing', 'Completed', 'Canceled')
-      // cost: Float
-      // distance: Float (in miles or km)
-      // route: Array of Objects
-      // latitude: Float
-      // longitude: Float
-      // keybotId: String (Reference to keybots/keybotId)
-      // accessKey: String
+        //         rideId: String (unique identifier)
+        // userId: String (Reference to users/userId)
+        // driverId: String (Reference to drivers/driverId)
+        // carId: String (Reference to cars/carId)
+        // fleetId: String (Reference to fleets/fleetId)
+        // startLocation: Object
+        // latitude: Float
+        // longitude: Float
+        // endLocation: Object
+        // latitude: Float
+        // longitude: Float
+        // startTime: Timestamp
+        // endTime: Timestamp
+        // status: Enum ('Requested', 'Ongoing', 'Completed', 'Canceled')
+        // cost: Float
+        // distance: Float (in miles or km)
+        // route: Array of Objects
+        // latitude: Float
+        // longitude: Float
+        // keybotId: String (Reference to keybots/keybotId)
+        // accessKey: String
 
-      //realtime database
-
-
-      //get keybot details note keybotId is reference  KeyBots/ETq5y9pE5irNlAxEitZF
-      const keybotRef = await carRef.get();
-      const keybotId = await keybotRef.data().keybotId.get().then(doc => doc.id);
-      console.log("keybot", keybotId);
-
-      const fleetId = await carRef.get().then(doc => doc.data().fleetId.get().then(doc => doc.id));
-
-      console.log("fleetId", fleetId);
+        //realtime database
 
 
+        //get keybot details note keybotId is reference  KeyBots/ETq5y9pE5irNlAxEitZF
+        const keybotRef = await carRef.get();
+        const keybotId = await keybotRef.data().keybotId.get().then(doc => doc.id);
+        console.log("keybot", keybotId);
+
+        const fleetId = await carRef.get().then(doc => doc.data().fleetId.get().then(doc => doc.id));
+
+        console.log("fleetId", fleetId);
 
 
-      const newRide = {
-        inprogress: false,
-        userId: user.uid,
-        carId: car.id,
-        fleetId: fleetId,
-        startLocation: {
-          latitude: location.coords.latitude,
-          longitude: location.coords.longitude,
-        },
-        endLocation: {
-          latitude: 0,
-          longitude: 0,
-        },
-        currentLocation: {
-          latitude: location.coords.latitude,
-          longitude: location.coords.longitude,
-        },
-        createdAt: firestore.Timestamp.now(),
-        startTime: 0,
-        endTime: 0,
-        status: "Initialised",
-        cost: 0,
-        distance: 0,
-        keybotId: keybotId
-      };
-
-      console.log("newRide", newRide);
-
-      //create a new ride object in realtime database
-
-      const rideRef = database().ref('Rides').push();
-      await rideRef.set(newRide).then(() => {
-        console.log('Ride added!');
-      });
 
 
-      if (carDoc.data()?.current_userId === null || carDoc.data()?.current_userId === undefined) {
-        transaction.update(carRef, {
-          current_userId: user.uid,
-          current_rideId: rideRef.key,
-          status: 'In use',
+        const newRide = {
+          inprogress: false,
+          userId: user.uid,
+          carId: car.id,
+          fleetId: fleetId,
+          startLocation: {
+            latitude: location.coords.latitude,
+            longitude: location.coords.longitude,
+          },
+          endLocation: {
+            latitude: 0,
+            longitude: 0,
+          },
+          currentLocation: {
+            latitude: location.coords.latitude,
+            longitude: location.coords.longitude,
+          },
+          createdAt: firestore.Timestamp.now(),
+          startTime: 0,
+          endTime: 0,
+          status: "Initialised",
+          cost: 0,
+          distance: 0,
+          keybotId: keybotId
+        };
 
+        console.log("newRide", newRide);
+
+        //create a new ride object in realtime database
+
+        const rideRef = database().ref('Rides').push();
+        await rideRef.set(newRide).then(() => {
+          console.log('Ride added!');
         });
 
 
-        //open start ride page
-        router.replace("ride/" + rideRef.key + "/start");
+        if (carDoc.data()?.current_userId === null || carDoc.data()?.current_userId === undefined) {
+          transaction.update(carRef, {
+            current_userId: user.uid,
+            current_rideId: rideRef.key,
+            status: 'In use',
+
+          });
+
+
+          //open start ride page
+          router.replace("ride/" + rideRef.key + "/start");
 
 
 
 
 
 
-     
-  
 
 
 
-      } else {
-        console.log("Car is not available!", carDoc.data());
-        throw 'Car is not available!';
-      }
-    });
-  } catch (e) {
-    console.log(e);
-    alert("Error booking a car: " + e);
-  }
-};
+
+
+        } else {
+          console.log("Car is not available!", carDoc.data());
+          throw 'Car is not available!';
+        }
+      });
+    } catch (e) {
+      console.log(e);
+      alert("Error booking a car: " + e);
+    }
+  };
 
 
 
@@ -434,6 +442,29 @@ const rideCar = async (car) => {
 
 
         <View style={styles.imageContainer}>
+          <IconButton
+            style={styles.overlayText}
+            icon="bookmark"
+            size={40}
+            iconColor={
+              favouriteCars.includes(Car?.id) ? theme.colors.primary : theme.colors.onSurface
+            }
+
+            onPress={
+              () => {
+                //update favourite cars in user
+                firestore().collection('Users').doc(user.uid).update({
+                  favourite_cars: favouriteCars.includes(Car?.id) ? firestore.FieldValue.arrayRemove(Car?.id) : firestore.FieldValue.arrayUnion(Car?.id)
+                }).then(() => {
+                  console.log("favourite cars updated");
+                  setFavouriteCars(favouriteCars.includes(Car?.id) ? favouriteCars.filter(item => item !== Car?.id) : [...favouriteCars, Car?.id]);
+                });
+
+              }
+            }
+          />
+
+
           {
             Car?.imageURL ? (
               <Image source={{ uri: Car.imageURL }} style={styles.image} />
@@ -500,7 +531,7 @@ const rideCar = async (car) => {
 
 
 
-        <Divider  />
+        <Divider />
 
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginVertical: 10 }}>
           <Text
@@ -678,8 +709,10 @@ const styles = StyleSheet.create({
   },
   overlayText: {
     position: 'absolute',
-    top: 0,
+    bottom: 0,
     right: 0,
+    zIndex: 1,
+    margin: 0,
   },
   map: {
     flex: 0.25,

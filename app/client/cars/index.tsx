@@ -41,6 +41,8 @@ export default function CarsInfiniteScroll() {
   });
 
 
+
+
   const fetchCars = async (startAfter) => {
     console.log("fetching cars");
     let query = firestore()
@@ -55,7 +57,7 @@ export default function CarsInfiniteScroll() {
 
     const granted = await new Promise(resolve => requestPermissionsExport(resolve));
     if (!granted) {
-        throw new Error('Ble permission not granted');
+      throw new Error('Ble permission not granted');
     }
 
 
@@ -87,23 +89,70 @@ export default function CarsInfiniteScroll() {
     console.log("curent user car", selectedCar);
 
 
+
+    let sortedCars = carss;
+
+    //get favourite cars
+    const userRef = firestore().collection('Users').doc(user.uid);
+    const userDoc = await userRef.get();
+    const userFavouriteCars = userDoc.data().favourite_cars;
+
+    //check if there are any favourite cars and if there are sort them to the top
+    console.log("favouriteCarssss", userFavouriteCars);
+    if (userFavouriteCars.length > 0) {
+      //sort so that the selected car is first
+      console.log("favouriteCars", userFavouriteCars);
+      console.log("carss ids", carss.map(car => car.id));
+
+      let reorderedCars = carss.sort((a, b) => {
+        // Check if car 'a' is in the favouriteCars array
+        const aIsFavourite = userFavouriteCars.includes(a.id);
+        // Check if car 'b' is in the favouriteCars array
+        const bIsFavourite = userFavouriteCars.includes(b.id);
+
+        if (aIsFavourite && !bIsFavourite) {
+          // If car 'a' is a favourite and car 'b' is not, place 'a' before 'b'
+          return -1;
+        } else if (!aIsFavourite && bIsFavourite) {
+          // If car 'b' is a favourite and car 'a' is not, place 'b' before 'a'
+          return 1;
+        } else {
+          // If both cars are favourites or both cars are not favourites, don't change their order
+          return 0;
+        }
+      });
+
+      sortedCars = reorderedCars;
+
+
+
+
+    }
     if (_inUseCar) {
       setInUseCar(_inUseCar);
       //sort so that the selected car is first
 
-      const reorderedCars = carss.filter(car => car.id !== _inUseCar.id);
+      const reorderedCars = sortedCars.filter(car => car.id !== _inUseCar.id);
       reorderedCars.unshift(_inUseCar);
-      return reorderedCars;
-
-
-
+      sortedCars = reorderedCars;
 
     }
     else {
       setInUseCar(null);
     }
 
-    return carss;
+    //add favourite property to cars
+    sortedCars = sortedCars.map(car => {
+      if (userFavouriteCars.includes(car.id)) {
+        return { ...car, favourite: true };
+      }
+      else {
+        return { ...car, favourite: false };
+      }
+    });
+
+
+    return sortedCars;
 
 
 
@@ -157,7 +206,18 @@ export default function CarsInfiniteScroll() {
 
   const fetchInitialCars = async () => {
     // This function only fetches the initial set of cars
+
+
+
+
+
     const newCars = await fetchCars();
+
+
+
+
+
+
     // console.log(newCars);
     setCars(newCars);
     console.log("fetchInitialCars", cars);
@@ -426,10 +486,12 @@ export default function CarsInfiniteScroll() {
 
 
   return (
-    <View style={{ flex: 1,paddingTop: insets.top,
+    <View style={{
+      flex: 1, paddingTop: insets.top,
       paddingBottom: insets.bottom,
       paddingLeft: insets.left,
-      paddingRight: insets.right, }}>
+      paddingRight: insets.right,
+    }}>
       {!showMap ? (
         <><Animated.View style={styles.container}>
           <Title
@@ -444,8 +506,8 @@ export default function CarsInfiniteScroll() {
               marginLeft: 10,
             }}
           >{
-            inUseCar ? "Your Car" : "Find a Car"
-          }</Title>
+              inUseCar ? "Your Car" : "Find a Car"
+            }</Title>
           <Button
             style={styles.filterButton}
             icon="filter"
@@ -501,21 +563,21 @@ export default function CarsInfiniteScroll() {
 
             <>
               {selectedCar ? (
-                <Animated.View  entering={FadeInDown.duration(1000).springify()}
-                
-                style={{
-                  position: 'absolute',
-                  left: 0,
-                  right: 0,
-                  height: 180,
-                  zIndex: 1,
-                  backgroundColor: 'transparent',
-                  marginRight: 64,
-                  marginLeft: 12,
-                  marginTop: 12,
+                <Animated.View entering={FadeInDown.duration(1000).springify()}
 
-                }}
-                 
+                  style={{
+                    position: 'absolute',
+                    left: 0,
+                    right: 0,
+                    height: 180,
+                    zIndex: 1,
+                    backgroundColor: 'transparent',
+                    marginRight: 64,
+                    marginLeft: 12,
+                    marginTop: 12,
+
+                  }}
+
                 >
                   <Card style={[styles.card, {
                     margin: 0,
@@ -556,6 +618,7 @@ export default function CarsInfiniteScroll() {
                         <Button
                           mode='contained'
                           icon='car'
+                          disabled={(selectedCar.current_userId !== null && selectedCar.current_userId !== undefined) || inUseCar !== null}
                           onPress={() => {
                             setSelectedCar(selectedCar);
                             router.push("/client/cars/" + selectedCar.id);
@@ -616,15 +679,15 @@ export default function CarsInfiniteScroll() {
       ) : (
 
 
-        <Animated.FlatList 
+        <Animated.FlatList entering={FadeIn.duration(1000).springify()}
           // style={{ marginBottom: 50 }}
           data={cars}
           renderItem={({ item }) => (
-            <Card style={styles.card} 
+            <Card style={styles.card}
             >
 
-              
-              
+
+
               <View style={styles.cardLayout}>
                 <Card.Cover style={styles.cardImage} source={{ uri: item.imageURL }} />
                 <View style={styles.textContainer}>
@@ -632,6 +695,7 @@ export default function CarsInfiniteScroll() {
                   <Paragraph style={styles.paragraph}>{item.status}</Paragraph>
                   <Paragraph style={styles.paragraph}>License Plate: {item.licensePlate}</Paragraph>
                   <Paragraph style={styles.paragraph}>Rating: {item.rating}</Paragraph>
+
                   {/* <Paragraph style={styles.paragraph}>current_userId: {item.current_userId}</Paragraph> */}
 
 
@@ -639,7 +703,7 @@ export default function CarsInfiniteScroll() {
               </View>
 
               <View style={styles.cardBottom}>
-                <Paragraph style={styles.distance}>Distance: {getDistance(item)}</Paragraph>
+                <Paragraph style={styles.distance}>{getDistance(item)} away</Paragraph>
                 <Card.Actions style={styles.cardActions}>
                   <Button
                     mode='contained'
@@ -654,7 +718,7 @@ export default function CarsInfiniteScroll() {
                   </Button>
 
                   {item.id === inUseCar?.id ? (
-                    
+
 
                     <Button
                       mode='contained'
@@ -663,10 +727,10 @@ export default function CarsInfiniteScroll() {
                         router.push("ride/" + item.current_rideId + "/progress");
                       }}>
                       View
-                      </Button>
-                      
-                  
-                  ) : null} 
+                    </Button>
+
+
+                  ) : null}
 
 
 
@@ -731,7 +795,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 10,
   },
- 
+
   filterButton: {
     justifyContent: 'center',
     borderRadius: 30, // Match this to the search bar's borderRadius
@@ -787,6 +851,7 @@ const styles = StyleSheet.create({
     marginLeft: 16,
     marginTop: 16,
     flex: 0,
+   
   },
   textContainer: {
     flex: 1, // Take up remaining space
