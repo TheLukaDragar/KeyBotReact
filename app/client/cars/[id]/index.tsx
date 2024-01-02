@@ -484,7 +484,7 @@ export default function KeyBotDetails() {
 
             <Title
               style={{
-                fontSize: 30, fontWeight: "800", color: textColor,
+                fontSize: 25, fontWeight: "800", color: textColor,
                 borderRadius: 30,
                 marginLeft: 10,
 
@@ -544,11 +544,12 @@ export default function KeyBotDetails() {
 
             {
               getDistance(Car).rawDistance < 1000 ? (
-                <Text style={{ textAlign: 'center' }}
+                <Text style={{ textAlign: 'center' , fontWeight: 'normal', fontSize: 18
+               }}
 
                 > {getDistance(Car).formattedDistance} away</Text>
               ) : (
-                <Text style={{ textAlign: 'center' }}
+                <Text style={{ textAlign: 'center',fontWeight: 'normal', fontSize: 18 }}
 
                 >{getDistance(Car).formattedDistance} away please move closer to unlock</Text>
               )

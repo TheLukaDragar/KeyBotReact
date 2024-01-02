@@ -21,7 +21,9 @@ export async function getLocation() {
     const MAX_TRIES = 5
     let tries = 1
 
-    if (cachedLocation && cacheTimestamp && Date.now() - cacheTimestamp < CACHE_DURATION) {
+
+    //if null do not return cached location
+    if (cachedLocation && cacheTimestamp && Date.now() - cacheTimestamp < CACHE_DURATION && cachedLocation.coords.latitude !== null && cachedLocation.coords.longitude !== null) {
         return cachedLocation
     }
 
@@ -42,6 +44,7 @@ export async function getLocation() {
                 throw new Error('Timeout')
             }
         } catch (err) {
+            console.log('location error', err)
             locationError = err as Error
         } finally {
             tries += 1
