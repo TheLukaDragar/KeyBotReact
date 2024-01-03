@@ -9,9 +9,9 @@ import Animated, { FadeInUp } from 'react-native-reanimated';
 import Toast from 'react-native-root-toast';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import MapView from 'react-native-maps';
 import { View } from '../../../components/Themed';
 import { useAppDispatch } from '../../../data/hooks';
-import { getLocation } from '../../../utils/getlocation';
 
 export default function ConnectToTheBox() {
   const router = useRouter();
@@ -24,6 +24,8 @@ export default function ConnectToTheBox() {
   const [ride, setRide] = useState<any>(undefined);
 
   const [location, setLocation] = React.useState<LocationObject | null>(null);
+  const mapRef = React.useRef<MapView>(null);
+
 
 
 
@@ -36,16 +38,17 @@ export default function ConnectToTheBox() {
   const fetchRide = async () => {
     try {
       let rideRef = database().ref('Rides').child(String(params.id));
-      rideRef.on('value', snapshot => {
+      const snapshot = await rideRef.once('value');
         const ride = {
           id: snapshot.key,
           ...snapshot.val()
         };
         console.log("RIDE", ride);
         setRide(ride);
-      });
+        //unsubscribe
+        
+      
       // Unsubscribe from the listener when it's no longer needed
-      return () => rideRef.off();
     } catch (error) {
       console.error("Error fetching ride: ", error);
       // Handle the error as you need here
@@ -57,10 +60,12 @@ export default function ConnectToTheBox() {
   useEffect(() => {
     fetchRide();
 
+  
+    // Clean up function
     return () => {
-      // Cleanup logic here if needed
-    }
-  }, []);
+      //unsubscribe
+    };
+  }, []); 
   const [elapsedTime, setElapsedTime] = useState(0);
 
   useEffect(() => {
@@ -84,12 +89,49 @@ export default function ConnectToTheBox() {
 
 
 
+  // useEffect(() => {
+
+  //   //refetch();
+
+  //   (async () => {
+
+  //     let { status } = await Location.requestForegroundPermissionsAsync();
+  //     if (status !== 'granted') {
+  //       Toast.show("You need to grant location permissions to use this feature.", {
+  //         duration: Toast.durations.LONG,
+  //         position: Toast.positions.BOTTOM,
+  //         shadow: true,
+  //         animation: true,
+  //         hideOnPress: true,
+  //         delay: 0,
+  //         backgroundColor: theme.colors.error,
+  //       });
+
+  //       return;
+  //     }
+
+  //     let location = await getLocation()
+  //     setLocation(location);
+
+
+
+
+
+
+  //   })();
+  // }, [])
+
+  let locationSubcription: { remove: any; } | null = null;
+  //use state for subscription
+
+  //last ride update time
+  const [lastRideUpdateTime, setLastRideUpdateTime] = useState(Date.now());
+
+
   useEffect(() => {
-
-    //refetch();
-
-    (async () => {
-
+    let isSubscribed = true;
+    
+    const subscribe = async () => {
       let { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') {
         Toast.show("You need to grant location permissions to use this feature.", {
@@ -101,48 +143,85 @@ export default function ConnectToTheBox() {
           delay: 0,
           backgroundColor: theme.colors.error,
         });
-
         return;
       }
+  
+      try {
+        locationSubcription = await Location.watchPositionAsync(
+          {
+            distanceInterval: 0, // for IOS
+            accuracy: Location.Accuracy.High,
+            timeInterval: 10000 // for Android
+          },
+          async (loc) => {
+            if (!isSubscribed) return;
+            
+            setLocation(loc);
+            console.log("LOCATION", loc);
+  
+            // Update the ride every 10 seconds
+            if (Date.now() - lastRideUpdateTime >= 10000) {
+              setLastRideUpdateTime(Date.now());
+  
+              // Call the updateRide function here
+              await updateRide(loc);
+            }
+          }
+        );
+      } catch (error) {
+        alert(error);
+      }
+    };
+  
+    subscribe();
+  
+    return () => {
+      isSubscribed = false;
+      if (locationSubcription) {
+        locationSubcription.remove();
+      }
+    };
+  }, []);
 
-      let location = await getLocation()
-      setLocation(location);
-    })();
-  }, [])
+  //remove subscription on unmount
+
+  
 
 
 
   //start ride //set the realtime propertires 
-  const updateRide = async () => {
+  const updateRide = async (currentLocation: LocationObject) => {
 
 
 
     //CODE HEREEE
     //https://github.com/expo/expo/issues/22183
     try {
+
+      //if location is null, return
+      if (!currentLocation || !currentLocation?.coords.latitude || !currentLocation?.coords.longitude) {
+        return;
+      }
+
+
       //set the realtime properties
       let rideRef = database().ref('Rides').child(String(params.id));
+
+
       rideRef.update({
-        startTime: database.ServerValue.TIMESTAMP,
-        status: "In progress",
-        startLocation: {
-          latitude: location?.coords.latitude,
-          longitude: location?.coords.longitude,
-        },
         currentLocation: {
-          latitude: location?.coords.latitude,
-          longitude: location?.coords.longitude,
+          latitude: currentLocation?.coords.latitude,
+          longitude: currentLocation?.coords.longitude,
         }
 
-
-
-
       });
+      console.log("RIDE UPDATED", currentLocation?.coords.latitude, currentLocation?.coords.longitude);
       // Unsubscribe from the listener when it's no longer needed
       return () => rideRef.off();
     } catch (error) {
       console.error("Error fetching ride: ", error);
-      alert("Error fetching ride: " + error);
+
+     
       // Handle the error as you need here
     }
   }
@@ -154,12 +233,63 @@ export default function ConnectToTheBox() {
         style={{ flex: 10, }}
       >
         {location && ride ? (
-          <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
+          <View style={{
+            flex: 1, alignItems: "center", justifyContent: "center"
+          }}>
             <Title style={styles.title}>Ride in progress</Title>
 
             <Paragraph style={styles.subtitle}>ride Id: {params.id}</Paragraph>
             <Paragraph style={styles.subtitle}>Elapsed Time: {formatElapsedTime(elapsedTime)}</Paragraph>
-            <Paragraph style={styles.subtitle}>E: {JSON.stringify(ride)}</Paragraph>
+            {/* <Paragraph style={styles.subtitle}>E: {JSON.stringify(ride)}</Paragraph> */}
+
+            <View style={{
+              height: 400, width: "100%", marginVertical: 10
+            }}>
+              {location?.coords.latitude && location?.coords.longitude ? (
+                <>
+                  <MapView
+                    style={styles.map}
+                    ref={mapRef}
+                    initialRegion={{
+                      latitude: location?.coords.latitude,
+                      longitude: location?.coords.longitude,
+                      latitudeDelta: 0.0922,
+                      longitudeDelta: 0.0421
+                    }}
+                    camera={{
+                      center: {
+                        latitude: location?.coords.latitude,
+                        longitude: location?.coords.longitude,
+                      },
+                      zoom: 16,
+                      pitch: 0,
+                      heading: 0,
+                      altitude: 0,
+                    }}
+                    userLocationAnnotationTitle="You are here"
+                    followsUserLocation={true}
+                    showsUserLocation={true}
+                  >
+                    {/* <Marker
+                  coordinate={{
+                    latitude: Car?.location?.latitude,
+                    longitude: Car?.location?.longitude,
+                  }} /> */}
+                  </MapView>
+                </>
+
+              ) : (
+
+                <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
+                  <ActivityIndicator size="large" />
+                </View>
+
+              )}
+            </View>
+
+
+
+
 
             <Button mode="contained"
               icon="check"
@@ -172,9 +302,7 @@ export default function ConnectToTheBox() {
 
               }}>
               End Ride
-            </Button>
-
-            <Button mode="contained"
+            </Button><Button mode="contained"
               icon="bug"
               contentStyle={{ height: 80, width: 150 }}
               onPress={() => {
@@ -228,10 +356,17 @@ const styles = StyleSheet.create({
     fontWeight: "bold", marginTop: 0
   },
   subtitle: {
-    textAlign: "center", marginBottom: 40, marginHorizontal: 30
+    textAlign: "center", marginHorizontal: 30
   },
   subtitle_small: {
     textAlign: "center", marginBottom: 10, marginHorizontal: 30
+  },
+  map: {
+    flex: 1,
+
+
+
+
   },
 
 

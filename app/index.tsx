@@ -48,7 +48,7 @@ export default function TabTwoScreen() {
     SplashScreen.hideAsync();
     return (
       <View style={styles.container}>
-        <Text style={styles.title}>DLMD</Text>
+        <Text style={styles.title}>KeyBot</Text>
       </View>
     );
   }

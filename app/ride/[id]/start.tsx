@@ -1,26 +1,24 @@
 import database from '@react-native-firebase/database';
 import firestore from '@react-native-firebase/firestore';
+import CryptoES from 'crypto-es';
 import Constants from 'expo-constants';
 import * as Location from 'expo-location';
 import { LocationObject } from 'expo-location';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
-import { FlatList, Linking, StyleSheet } from 'react-native';
+import { FlatList, StyleSheet } from 'react-native';
 import PagerView from 'react-native-pager-view';
 import { ActivityIndicator, Avatar, Button, Subheading, Title, useTheme } from 'react-native-paper';
 import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
 import Toast from 'react-native-root-toast';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { authenticate, connectDeviceById, disconnectDevice, getChallenge, keyBotCommand, subscribeToEvents } from '../../../ble/bleSlice';
+import { authenticate, connectDeviceById, disconnectDevice, getChallenge, keyBotCommand, resetConnectionState, subscribeToEvents } from '../../../ble/bleSlice';
 import { KeyBotCommand, KeyBotState } from '../../../ble/bleSlice.contracts';
 import ScreenIndicators from '../../../components/ScreenIndicators';
-import StepCard from '../../../components/StepCard';
 import { View } from '../../../components/Themed';
-import { Box, ParcelData, PreciseLocation, getErrorMessage, isErrorWithMessage, useDepositParcelMutation, useGetParcelByIdQuery, useLazyGetBoxAccessKeyQuery, useLazyGetBoxPreciseLocationQuery, useLazyGetBoxQuery, useUpdateParcelByIdMutation } from '../../../data/api';
-import { ApproveTransfer, ApproveTransferResponse, CreateDatasetResponse, Metadata, UploadMetadataToIPFSResponse, approveTransfer, callCreateDataset, callPushToSMS, callSellDataset, updateBox, uploadMetadataToIPFS } from '../../../data/blockchain';
+import { PreciseLocation, getErrorMessage, isErrorWithMessage } from '../../../data/api';
 import { useAppDispatch, useAppSelector } from '../../../data/hooks';
 import { getLocation } from '../../../utils/getlocation';
-import CryptoES from 'crypto-es';
 
 export default function ConnectToTheBox() {
   const router = useRouter();
@@ -31,7 +29,7 @@ export default function ConnectToTheBox() {
   const ble = useAppSelector((state) => state.ble);
 
   const [page, setPage] = useState(0);
- 
+
 
   const [KeyBot, setKeyBot] = useState<any>(undefined);
   const [ride, setRide] = useState<any>(undefined);
@@ -49,7 +47,7 @@ export default function ConnectToTheBox() {
 
   const [activeStep, setActiveStep] = useState(0);
   const [errorStep, setErrorStep] = useState<number | null>(null);
- 
+
   const pagerRef = useRef<PagerView>(null);
 
 
@@ -64,6 +62,41 @@ export default function ConnectToTheBox() {
         setRide(ride);
       });
       // Unsubscribe from the listener when it's no longer needed
+      return () => rideRef.off();
+    } catch (error) {
+      console.error("Error fetching ride: ", error);
+      // Handle the error as you need here
+    }
+  }
+
+  const cancelRide = async () => {
+    try {
+      let rideRef = database().ref('Rides').child(String(params.id));
+      rideRef.update({
+        status: "Cancelled"
+  
+      });
+
+      //update Car status
+      let carRef = firestore().collection('Cars').doc(ride.carId);
+      carRef.update({
+        status: "Available",
+        current_rideId: null,
+        current_userId: null,
+
+        location: {
+          latitude: location?.coords.latitude,
+          longitude: location?.coords.longitude,
+        }
+
+      });
+
+
+
+
+      // Unsubscribe from the listener when it's no longer needed and navigate to client
+      router.replace("/client");
+
       return () => rideRef.off();
     } catch (error) {
       console.error("Error fetching ride: ", error);
@@ -88,6 +121,11 @@ export default function ConnectToTheBox() {
   }
 
   useEffect(() => {
+
+    //resetConnectionState
+    dispatch(resetConnectionState({}));
+
+    
     fetchRide();
 
     return () => {
@@ -100,13 +138,6 @@ export default function ConnectToTheBox() {
       fetchKeyBot(ride.keybotId);
     }
   }, [ride]);
-
-
-  
-
-
-
-
 
 
 
@@ -122,9 +153,7 @@ export default function ConnectToTheBox() {
     }
   }, [activeStep]);
 
-  const nextStep = () => {
-    setActiveStep((prevStep) => prevStep + 1);
-  };
+  
   const handleError = (step: number, error: any) => {
     console.log("Error at step " + step + ": " + JSON.stringify(error, null, 2));
     setErrorStep(step);
@@ -169,7 +198,7 @@ export default function ConnectToTheBox() {
 
       // console.log("KeyBot",KeyBot);
 
-     
+
 
       // 1. Connect to device
       const connectResult = await dispatch(connectDeviceById({ id: keybot.mac })).unwrap();
@@ -204,17 +233,17 @@ export default function ConnectToTheBox() {
         inaccuracy: location?.coords.accuracy!,
       }
 
-        //For now we do this locally then we will do it on the server
-        let key = keybot.key;
-        const key128Bits = CryptoES.enc.Utf8.parse(key);
-        //ecb mode
-        const encrypted = CryptoES.AES.encrypt(challenge, key128Bits, { mode: CryptoES.mode.ECB, padding: CryptoES.pad.NoPadding });
-        //to hex
-        let encryptedHex = encrypted.ciphertext.toString(CryptoES.enc.Hex);
-        //to uppercase
-        encryptedHex = encryptedHex.toUpperCase();
-        console.log("encrypted: " + encryptedHex);
-        let solved_challenge = encryptedHex
+      //For now we do this locally then we will do it on the server
+      let key = keybot.key;
+      const key128Bits = CryptoES.enc.Utf8.parse(key);
+      //ecb mode
+      const encrypted = CryptoES.AES.encrypt(challenge, key128Bits, { mode: CryptoES.mode.ECB, padding: CryptoES.pad.NoPadding });
+      //to hex
+      let encryptedHex = encrypted.ciphertext.toString(CryptoES.enc.Hex);
+      //to uppercase
+      encryptedHex = encryptedHex.toUpperCase();
+      console.log("encrypted: " + encryptedHex);
+      let solved_challenge = encryptedHex
 
 
       // 4. Authenticate
@@ -289,7 +318,7 @@ export default function ConnectToTheBox() {
 
 
 
-        
+
       });
 
       //disconect from keybor
@@ -305,7 +334,7 @@ export default function ConnectToTheBox() {
     }
   }
 
- 
+
 
 
 
@@ -343,7 +372,7 @@ export default function ConnectToTheBox() {
 
                     >Connect to the Vehicle (KeyBot)</Title>
                     <Title style={styles.subtitle}>
-                    {ble.connectedDevice?.id}
+                      {ble.connectedDevice?.id}
                       To unlock the Vehicle, you need to connect to the KeyBot first.
 
                     </Title>
@@ -422,26 +451,27 @@ export default function ConnectToTheBox() {
                   router.replace("/ride/" + ride.id + "/progress");
 
                 }}>
-                
+
                 OK
               </Button>
-              <Button 
+              <Button
                 icon="close"
                 style={{ marginTop: 20 }}
                 contentStyle={{ height: 80, width: 200, }}
                 onPress={() => {
                   console.log('Cancelled parcel placement in the Vehicle')
                   //navigate back to where we came from
-                  router.back();
+                  cancelRide();
+                  // router.back();
 
                 }}>
                 Cancel
               </Button>
 
             </View>
-            
-            
-         
+
+
+
 
           </PagerView>
         ) : (

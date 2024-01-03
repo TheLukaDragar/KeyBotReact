@@ -1,0 +1,63 @@
+{
+  "project_info": {
+    "project_number": "414868164821",
+    "firebase_url": "https://keybotreact-default-rtdb.europe-west1.firebasedatabase.app",
+    "project_id": "keybotreact",
+    "storage_bucket": "keybotreact.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:414868164821:android:59ae729a1307dc434b525c",
+        "android_client_info": {
+          "package_name": "com.lukadragar.KeyBot"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "414868164821-kekpquikt1j0gj5j3gvpmdtb6g4km2l8.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.lukadragar.KeyBot",
+            "certificate_hash": "f46550f5e45afe5494ef10f8eb92397ac8ddc2d8"
+          }
+        },
+        {
+          "client_id": "414868164821-lupsaptau080m8dqs9oc1dsuq45u39hv.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.lukadragar.KeyBot",
+            "certificate_hash": "5e8f16062ea3cd2c4a0d547876baa6f38cabf625"
+          }
+        },
+        {
+          "client_id": "414868164821-d74dqmptkfg7vbc59210aeg7ou7018q0.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCUn6Wp8YcCqjjXZd3MXriASlCGVh4FWMU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "414868164821-d74dqmptkfg7vbc59210aeg7ou7018q0.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "414868164821-2o6bhli2qrgjlghh3attveo6m488f4e4.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.lukadragar.KeyBot"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

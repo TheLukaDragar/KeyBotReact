@@ -42,6 +42,9 @@ export default function CarsInfiniteScroll() {
         setLastVisible(ridesArray[ridesArray.length - 1]);
         console.log("set lastVisible", ridesArray[ridesArray.length - 1].model);
       }
+
+      //unsubscribe
+      return () => ridesRef.off();
     });
   };
 

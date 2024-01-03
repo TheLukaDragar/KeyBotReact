@@ -726,7 +726,15 @@ const bleSlice = createSlice({
                 level: batteryLevel,
                 text: `${batteryLevel}%`,
             }
+        },
+        resetConnectionState(state, action) {
+        
+
+
+
+            state.deviceConnectionState = { status: ConnectionState.DISCONNECTED, error: '' };
         }
+
     },
     extraReducers(builder) {
         builder
@@ -830,7 +838,7 @@ const bleSlice = createSlice({
 });
 export default bleSlice.reducer;
 export const { setAdapterState, setLocationPermissionStatus, setConnectedDevice, addScannedDevice, clearScannedDevices, stopDeviceScan, setDemoMode, addLog
-    , updateKeySensorStatus, updateMidSensorsStatus, updateKeyBotState, updateBatteryLevel, setConnectionState } = bleSlice.actions;
+    , updateKeySensorStatus, updateMidSensorsStatus, updateKeyBotState, updateBatteryLevel, setConnectionState,resetConnectionState } = bleSlice.actions;
 export const selectAdapterState = (state: RootState) => state.ble.adapterState;
 export const selectConnectedDevice = (state: RootState) => state.ble.connectedDevice;
 export const selectScannedDevices = (state: RootState) => state.ble.deviceScan;

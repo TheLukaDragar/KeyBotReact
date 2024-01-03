@@ -4,16 +4,16 @@ import * as ImagePicker from 'expo-image-picker';
 import * as Location from 'expo-location';
 import { LocationObject } from 'expo-location';
 import { useLocalSearchParams, useNavigation, useRouter } from 'expo-router';
-import React, { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Image, ScrollView, StyleSheet } from 'react-native';
 import MapView, { Marker } from 'react-native-maps';
 import { Button, Divider, IconButton, Title, useTheme } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../../../../auth/provider';
 import { Text, View, getTheme } from '../../../../components/Themed';
-import { Box, getErrorMessage } from '../../../../data/api';
-import { uploadToFirebase } from "../../../../firebaseConfig";
+import { getErrorMessage } from '../../../../data/api';
 import { getLocation } from '../../../../utils/getlocation';
+import React = require('react');
 
 
 export default function KeyBotDetails() {
@@ -50,14 +50,12 @@ export default function KeyBotDetails() {
   const [permission, requestPermission] = ImagePicker.useCameraPermissions();
   const [libpermission, requestLibPermission] = ImagePicker.useMediaLibraryPermissions();
 
-  const [isUploading, setUploading] = useState(false);
-  const [visible, setVisible] = React.useState(false);
-  const [isEnabled, setIsEnabled] = React.useState(false);
 
-  const isFirstRender = useRef(true);
   const mapRef = React.useRef<MapView>(null);
   const textColor = getTheme().text;
   const { user } = useAuth();
+
+  const [isLoading, setLoading] = useState(false);
 
 
   const [favouriteCars, setFavouriteCars] = useState<any[]>([]);
@@ -65,55 +63,6 @@ export default function KeyBotDetails() {
 
 
 
-  const handleUploadImage = async () => {
-    // let pickerResult = await ImagePicker.launchCameraAsync({
-    //   allowsEditing: true,
-    //   aspect: [4, 3],
-    // });
-
-    //ceck permission
-    if (permission?.status !== ImagePicker.PermissionStatus.GRANTED) {
-      requestPermission();
-
-    }
-    if (libpermission?.status !== ImagePicker.PermissionStatus.GRANTED) {
-      requestLibPermission();
-    }
-
-
-    let pickerResult = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      aspect: [4, 3],
-      quality: 0.7,
-    });
-
-    if (!pickerResult.canceled) {
-      uploadImageAsync(pickerResult.assets[0].uri, `image_${id}.jpg`);
-    }
-  };
-
-  const uploadImageAsync = async (uri: string, imageName: string) => {
-    setUploading(true);
-
-    try {
-      const uploadedImage = await uploadToFirebase(uri, imageName, (progress: any) => {
-        console.log(`Upload progress: ${progress}%`);
-      });
-
-      if (Car) {
-        setBoxDetails({ ...Car, imageURL: uploadedImage.downloadUrl });
-        console.log("set imageUrl", uploadedImage.downloadUrl);
-
-      }
-
-    } catch (error) {
-      console.error('Error uploading image:', error);
-    }
-
-
-    setUploading(false);
-  };
 
 
 
@@ -173,93 +122,16 @@ export default function KeyBotDetails() {
         return;
       }
 
-      let location = await getLocation()
+      let location = await getLocation(true);
       setLocation(location);
     })();
     get_car_details()
   }, [id]);
 
-  const handleLicensePlateChange = (text: string) => {
-    text = text.replace(/\s/g, '');
-
-    if (!licensePlateRegex.test(text)) {
-      setLicensePlateError('Invalid license plate');
-    } else {
-      setLicensePlateError('');
-      if (Car) {
-        setBoxDetails({ ...Car, licensePlate: text });
-      }
-    }
-  }
-
-
-
-  const handleDetailsChange = (text: string) => {
-    if (Car) {
-      setBoxDetails({ ...Car, description: text });
-    }
-  }
-
-
-  const haveBoxDetailsChanged = (newDetails: Box, initialDetails: Box): boolean => {
-    const relevantKeys: (keyof Box)[] = ['licensePlate', 'imageURL', 'availability', 'location', 'description']; // Add any other keys that are relevant
-
-    const changed = relevantKeys.some((key: keyof Box) => {
-      if (typeof newDetails[key] === 'object' && newDetails[key] !== null) {
-        return JSON.stringify(newDetails[key]) !== JSON.stringify(initialDetails[key]);
-      }
-
-      return newDetails[key] !== initialDetails[key];
-    });
-    console.log("haveBoxDetailsChanged", changed);
-    return changed;
-  };
-
-  const handleBoxStatusChange = (value: boolean) => {
-    console.log("handleBoxStatusChange", value);
-    //check that all fields are filled like location, license plate, image, reputation threshold 
-
-    if (value === true) {
-      setIsEnabled(false);
-    }
-    // if (BoxDetails) {
-
-
-    //   const isBoxDetailsFilled = BoxDetails?.licensePlate !== "" && BoxDetails?.imageUrl !== "" && BoxDetails?.reputationThreshold !== 0 && BoxDetails?.preciseLocation !== null;
-
-
-    //   console.log("isBoxDetailsFilled", isBoxDetailsFilled);
-
-    //   if (!isBoxDetailsFilled && value) {
-    //     //setBoxDetails({ ...BoxDetails, boxStatus: BoxStatus.NOT_READY });
-    //     console.log("seting switch to false");
-    //     setIsEnabled(!value);
-
-
-    //   } else {
-
-    //     console.log("seting switch to x");
-    //     setIsEnabled(value)
-    //   }
-    //   // setBoxDetails({ ...BoxDetails, boxStatus: value ? BoxStatus.READY : BoxStatus.NOT_READY });
-
-    //   //setSwitchValue(!switchValue);
 
 
 
 
-
-
-
-
-    // } else {
-    //   console.log("BoxDetails is undefined");
-    //   setIsEnabled(value)
-    // }
-
-
-
-  }
 
 
 
@@ -356,7 +228,18 @@ export default function KeyBotDetails() {
         console.log("fleetId", fleetId);
 
 
+        let { status } = await Location.requestForegroundPermissionsAsync();
+        if (status !== 'granted') {
+          alert('Permission to access location was denied');
+          return;
+        }
 
+        let location = await getLocation(true);
+        setLocation(location);
+
+        if (!location) {
+          throw 'Problem getting your location. Please try again';
+        }
 
         const newRide = {
           inprogress: false,
@@ -402,6 +285,8 @@ export default function KeyBotDetails() {
 
           });
 
+          setLoading(false);
+
 
           //open start ride page
           router.replace("ride/" + rideRef.key + "/start");
@@ -417,11 +302,13 @@ export default function KeyBotDetails() {
 
 
         } else {
+          setLoading(false);
           console.log("Car is not available!", carDoc.data());
           throw 'Car is not available!';
         }
       });
     } catch (e) {
+      setLoading(false);
       console.log(e);
       alert("Error booking a car: " + e);
     }
@@ -516,7 +403,10 @@ export default function KeyBotDetails() {
             contentStyle={{ height: 60, width: 120 }}
             mode='contained'
             icon='car'
+            // Remove the unnecessary code causing the type mismatch error
+            loading={isLoading}
             onPress={() => {
+              setLoading(true);
               rideCar(Car)
             }}>
             Unlock
@@ -544,12 +434,13 @@ export default function KeyBotDetails() {
 
             {
               getDistance(Car).rawDistance < 1000 ? (
-                <Text style={{ textAlign: 'center' , fontWeight: 'normal', fontSize: 18
-               }}
+                <Text style={{
+                  textAlign: 'center', fontWeight: 'normal', fontSize: 18
+                }}
 
                 > {getDistance(Car).formattedDistance} away</Text>
               ) : (
-                <Text style={{ textAlign: 'center',fontWeight: 'normal', fontSize: 18 }}
+                <Text style={{ textAlign: 'center', fontWeight: 'normal', fontSize: 18 }}
 
                 >{getDistance(Car).formattedDistance} away please move closer to unlock</Text>
               )

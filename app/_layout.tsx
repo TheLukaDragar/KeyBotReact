@@ -121,6 +121,7 @@ export default function RootLayout(): ReactNode {
 
 
                         headerShown: true,
+                        headerBackButtonMenuEnabled: false,
 
 
 
@@ -134,17 +135,6 @@ export default function RootLayout(): ReactNode {
 
 
 
-                      }}
-                    />
-
-
-
-
-
-                    <Stack.Screen name="courier"
-                      options={{
-                        title: "Courier",
-                        animation: "slide_from_right"
                       }}
                     />
 

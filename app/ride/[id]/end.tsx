@@ -11,7 +11,7 @@ import { ActivityIndicator, Avatar, Button, Subheading, Title, useTheme } from '
 import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
 import Toast from 'react-native-root-toast';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { authenticate, connectDeviceById, disconnectDevice, getChallenge, keyBotCommand, subscribeToEvents } from '../../../ble/bleSlice';
+import { authenticate, connectDeviceById, disconnectDevice, getChallenge, keyBotCommand, resetConnectionState, subscribeToEvents } from '../../../ble/bleSlice';
 import { KeyBotCommand, KeyBotState } from '../../../ble/bleSlice.contracts';
 import ScreenIndicators from '../../../components/ScreenIndicators';
 import StepCard from '../../../components/StepCard';
@@ -88,6 +88,9 @@ export default function ConnectToTheBox() {
   }
 
   useEffect(() => {
+
+    //resetConnectionState
+    dispatch(resetConnectionState({}));
     fetchRide();
 
     return () => {
@@ -444,9 +447,9 @@ export default function ConnectToTheBox() {
                 style={{ marginTop: 20 }}
                 contentStyle={{ height: 80, width: 200, }}
                 onPress={() => {
-                  console.log('Cancelled parcel placement in the Vehicle')
+                  console.log('Cancelled end ride')
                   //navigate back to where we came from
-                  router.back();
+                  router.replace("/client/");
 
                 }}>
                 Cancel

@@ -59,6 +59,14 @@ export default function CarsInfiniteScroll() {
     if (!granted) {
       throw new Error('Ble permission not granted');
     }
+    let { status } = await Location.requestForegroundPermissionsAsync();
+    if (status !== 'granted') {
+      alert('Permission to access location was denied');
+      return;
+    }
+
+    let location = await getLocation();
+    setLocation(location);
 
 
 
@@ -196,6 +204,19 @@ export default function CarsInfiniteScroll() {
       setCars(newCars);
       setMoreDataAvailable(true);
 
+      (async () => {
+
+        let { status } = await Location.requestForegroundPermissionsAsync();
+        if (status !== 'granted') {
+          alert('Permission to access location was denied');
+          return;
+        }
+  
+        let location = await getLocation(true)
+        console.log("location refers", location);
+        setLocation(location);
+      })();
+
     } catch (e) {
       setError(e.message);
       alert("Error refreshing cars: " + e.message);
@@ -255,11 +276,11 @@ export default function CarsInfiniteScroll() {
       //retuen string
       if (d < 1000) {
         //round to 2dp
-        return d.toFixed(2) + "m";
+        return d.toFixed(2) + "m away";
 
 
       } else {
-        return (d / 1000).toFixed(2) + "km";
+        return (d / 1000).toFixed(2) + "km away";
 
       }
 
@@ -268,7 +289,7 @@ export default function CarsInfiniteScroll() {
 
 
     }
-    return "N/A"
+    return "";
   }
 
 
@@ -277,17 +298,17 @@ export default function CarsInfiniteScroll() {
   useEffect(() => {
     fetchInitialCars();
 
-    (async () => {
+    // (async () => {
 
-      let { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== 'granted') {
-        alert('Permission to access location was denied');
-        return;
-      }
+    //   let { status } = await Location.requestForegroundPermissionsAsync();
+    //   if (status !== 'granted') {
+    //     alert('Permission to access location was denied');
+    //     return;
+    //   }
 
-      let location = await getLocation();
-      setLocation(location);
-    })();
+    //   let location = await getLocation();
+    //   setLocation(location);
+    // })();
 
 
 
@@ -475,7 +496,7 @@ export default function CarsInfiniteScroll() {
   const [inUseCar, setInUseCar] = useState<any>(null);
 
   useEffect(() => {
-    console.log("location", location);
+    console.log("set location", location);
   }, [location]);
 
   const theme = getTheme();
@@ -493,7 +514,7 @@ export default function CarsInfiniteScroll() {
       paddingRight: insets.right,
     }}>
       {!showMap ? (
-        <><Animated.View style={styles.container}>
+        <><View style={styles.container}>
           <Title
             style={{
               fontSize: 30, fontWeight: "800", color: theme.text, flex: 1,
@@ -517,7 +538,7 @@ export default function CarsInfiniteScroll() {
 
             Filters
           </Button>
-        </Animated.View></>
+        </View></>
       ) : null}
 
       <Portal>
@@ -613,7 +634,7 @@ export default function CarsInfiniteScroll() {
                     </View>
 
                     <View style={styles.cardBottom}>
-                      <Paragraph style={styles.distance}>Distance: {getDistance(selectedCar)}</Paragraph>
+                      <Paragraph style={styles.distance}>{getDistance(selectedCar)}</Paragraph>
                       <Card.Actions style={styles.cardActions}>
                         <Button
                           mode='contained'
@@ -703,7 +724,7 @@ export default function CarsInfiniteScroll() {
               </View>
 
               <View style={styles.cardBottom}>
-                <Paragraph style={styles.distance}>{getDistance(item)} away</Paragraph>
+                <Paragraph style={styles.distance}>{getDistance(item)}</Paragraph>
                 <Card.Actions style={styles.cardActions}>
                   <Button
                     mode='contained'
