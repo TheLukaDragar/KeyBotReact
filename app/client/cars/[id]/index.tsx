@@ -72,9 +72,15 @@ export default function KeyBotDetails() {
       try {
 
         //set favourite cars from user.favouriteCars
-        let favouriteCars = await firestore().collection('Users').doc(user.uid).get().then(doc => doc.data().favourite_cars);
-        setFavouriteCars(favouriteCars);
+        let favouriteCars = await firestore().collection('Users').doc(user.uid).get().then(doc => doc.data()?.favourite_cars);
 
+        if (!favouriteCars || favouriteCars.length === 0) {
+          // Handle case where no favorite cars are there
+          // For example, display a message or perform some other action
+          setFavouriteCars([]);
+        } else {
+          setFavouriteCars(favouriteCars);
+        }
 
         console.log("favouriteCars", favouriteCars);
 
