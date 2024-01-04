@@ -8,7 +8,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
 import { FlatList, StyleSheet } from 'react-native';
 import PagerView from 'react-native-pager-view';
-import { ActivityIndicator, Avatar, Button, Subheading, Title, useTheme } from 'react-native-paper';
+import { ActivityIndicator, Avatar, Button, Paragraph, Subheading, Title, useTheme } from 'react-native-paper';
 import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
 import Toast from 'react-native-root-toast';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -74,7 +74,7 @@ export default function ConnectToTheBox() {
       let rideRef = database().ref('Rides').child(String(params.id));
       rideRef.update({
         status: "Cancelled"
-  
+
       });
 
       //update Car status
@@ -113,6 +113,7 @@ export default function ConnectToTheBox() {
           ...docSnapshot.data()
         };
         setKeyBot(keybot);
+        setSwitchUnlockDirection(keybot.unlockDirection ? keybot.unlockDirection : false);
       });
     } catch (error) {
       console.error("Error fetching keybot: ", error);
@@ -120,12 +121,29 @@ export default function ConnectToTheBox() {
     }
   }
 
+  //update car unlock direction - boolean 
+  const updateKeyBotUnlockDirection = async (keybotId: string, unlockDirection: boolean) => {
+    try {
+      console.log("updateKeyBotUnlockDirection", keybotId, unlockDirection);
+      let keybotRef = firestore().collection('KeyBots').doc(keybotId);
+      keybotRef.update({
+        unlockDirection: unlockDirection
+
+      });
+    } catch (error) {
+      console.error("Error uodating unlock direction: ", error);
+      // Handle the error as you need here
+    }
+  }
+
+
+
   useEffect(() => {
 
     //resetConnectionState
     dispatch(resetConnectionState({}));
 
-    
+
     fetchRide();
 
     return () => {
@@ -153,7 +171,7 @@ export default function ConnectToTheBox() {
     }
   }, [activeStep]);
 
-  
+
   const handleError = (step: number, error: any) => {
     console.log("Error at step " + step + ": " + JSON.stringify(error, null, 2));
     setErrorStep(step);
@@ -336,7 +354,7 @@ export default function ConnectToTheBox() {
 
 
 
-
+  const [switchUnlockDirection, setSwitchUnlockDirection] = useState(false);
 
 
   return (
@@ -416,19 +434,51 @@ export default function ConnectToTheBox() {
                 }</Title>
 
 
+
+
+
               <Button
                 icon=""
                 mode="contained"
                 contentStyle={{ height: 80, width: 200 }}
                 loading={ble.keyBotState.status === KeyBotState.KEYBOT_PRESSING_LEFT || ble.keyBotState.status === KeyBotState.KEYBOT_PRESSING_RIGHT}
                 disabled={ble.keyBotState.status === KeyBotState.KEYBOT_PRESSING_LEFT || ble.keyBotState.status === KeyBotState.KEYBOT_PRESSING_RIGHT}
-                onPress={() =>
-                  dispatch(keyBotCommand({ command: KeyBotCommand.KEYBOT_PRESS_LEFT }))
+                onPress={() => {
+                  if (switchUnlockDirection) {
+
+                    dispatch(keyBotCommand({ command: KeyBotCommand.KEYBOT_PRESS_LEFT }))
+                    console.log("pressing left");
+                  } else {
+                    dispatch(keyBotCommand({ command: KeyBotCommand.KEYBOT_PRESS_RIGHT }))
+                    console.log("pressing right");
+                  }
+
+                }
                 }
 
               >
                 Unlock
               </Button>
+
+              <Paragraph
+                onPress={() => {
+                  Toast.show("Switched unlock direction", {
+                    duration: Toast.durations.LONG,
+                    position: Toast.positions.CENTER,
+                    shadow: true,
+                    animation: true,
+                    hideOnPress: true,
+                    delay: 0,
+                    backgroundColor: theme.colors.primary,
+                  });
+                  updateKeyBotUnlockDirection(KeyBot.id, !switchUnlockDirection);
+                  setSwitchUnlockDirection(!switchUnlockDirection);
+                }}
+                style={{ marginTop: 20, color: theme.colors.primary }}
+
+              >Didn't unlock? Switch the direction</Paragraph>
+
+
 
             </View>
             <View key="2" style={styles.page}>

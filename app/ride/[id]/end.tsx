@@ -7,7 +7,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
 import { FlatList, Linking, StyleSheet } from 'react-native';
 import PagerView from 'react-native-pager-view';
-import { ActivityIndicator, Avatar, Button, Subheading, Title, useTheme } from 'react-native-paper';
+import { ActivityIndicator, Avatar, Button, Paragraph, Subheading, Title, useTheme } from 'react-native-paper';
 import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
 import Toast from 'react-native-root-toast';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -31,7 +31,7 @@ export default function ConnectToTheBox() {
   const ble = useAppSelector((state) => state.ble);
 
   const [page, setPage] = useState(0);
- 
+
 
   const [KeyBot, setKeyBot] = useState<any>(undefined);
   const [ride, setRide] = useState<any>(undefined);
@@ -49,7 +49,7 @@ export default function ConnectToTheBox() {
 
   const [activeStep, setActiveStep] = useState(0);
   const [errorStep, setErrorStep] = useState<number | null>(null);
- 
+
   const pagerRef = useRef<PagerView>(null);
 
 
@@ -70,6 +70,7 @@ export default function ConnectToTheBox() {
       // Handle the error as you need here
     }
   }
+  const [switchUnlockDirection, setSwitchUnlockDirection] = useState(false);
 
   const fetchKeyBot = async (keybotId: string) => {
     try {
@@ -80,9 +81,27 @@ export default function ConnectToTheBox() {
           ...docSnapshot.data()
         };
         setKeyBot(keybot);
+        setSwitchUnlockDirection(keybot.unlockDirection ? keybot.unlockDirection : false);
+
       });
     } catch (error) {
       console.error("Error fetching keybot: ", error);
+      // Handle the error as you need here
+    }
+  }
+
+
+  //update car unlock direction - boolean 
+  const updateKeyBotUnlockDirection = async (keybotId: string, unlockDirection: boolean) => {
+    try {
+      console.log("updateKeyBotUnlockDirection", keybotId, unlockDirection);
+      let keybotRef = firestore().collection('KeyBots').doc(keybotId);
+      keybotRef.update({
+        unlockDirection: unlockDirection
+
+      });
+    } catch (error) {
+      console.error("Error uodating unlock direction: ", error);
       // Handle the error as you need here
     }
   }
@@ -168,7 +187,7 @@ export default function ConnectToTheBox() {
 
       // console.log("KeyBot",KeyBot);
 
-     
+
 
       // 1. Connect to device
       const connectResult = await dispatch(connectDeviceById({ id: keybot.mac })).unwrap();
@@ -203,17 +222,17 @@ export default function ConnectToTheBox() {
         inaccuracy: location?.coords.accuracy!,
       }
 
-        //For now we do this locally then we will do it on the server
-        let key = keybot.key;
-        const key128Bits = CryptoES.enc.Utf8.parse(key);
-        //ecb mode
-        const encrypted = CryptoES.AES.encrypt(challenge, key128Bits, { mode: CryptoES.mode.ECB, padding: CryptoES.pad.NoPadding });
-        //to hex
-        let encryptedHex = encrypted.ciphertext.toString(CryptoES.enc.Hex);
-        //to uppercase
-        encryptedHex = encryptedHex.toUpperCase();
-        console.log("encrypted: " + encryptedHex);
-        let solved_challenge = encryptedHex
+      //For now we do this locally then we will do it on the server
+      let key = keybot.key;
+      const key128Bits = CryptoES.enc.Utf8.parse(key);
+      //ecb mode
+      const encrypted = CryptoES.AES.encrypt(challenge, key128Bits, { mode: CryptoES.mode.ECB, padding: CryptoES.pad.NoPadding });
+      //to hex
+      let encryptedHex = encrypted.ciphertext.toString(CryptoES.enc.Hex);
+      //to uppercase
+      encryptedHex = encryptedHex.toUpperCase();
+      console.log("encrypted: " + encryptedHex);
+      let solved_challenge = encryptedHex
 
 
       // 4. Authenticate
@@ -277,7 +296,7 @@ export default function ConnectToTheBox() {
       rideRef.update({
         startTime: database.ServerValue.TIMESTAMP,
         status: "Completed",
-        
+
         currentLocation: {
           latitude: location?.coords.latitude,
           longitude: location?.coords.longitude,
@@ -322,7 +341,7 @@ export default function ConnectToTheBox() {
     }
   }
 
- 
+
 
 
 
@@ -360,7 +379,7 @@ export default function ConnectToTheBox() {
 
                     >Connect to the Vehicle (KeyBot)</Title>
                     <Title style={styles.subtitle}>
-                    {ble.connectedDevice?.id}
+                      {ble.connectedDevice?.id}
                       To Lock the Vehicle, you need to connect to the KeyBot first.
 
                     </Title>
@@ -410,13 +429,38 @@ export default function ConnectToTheBox() {
                 contentStyle={{ height: 80, width: 200 }}
                 loading={ble.keyBotState.status === KeyBotState.KEYBOT_PRESSING_LEFT || ble.keyBotState.status === KeyBotState.KEYBOT_PRESSING_RIGHT}
                 disabled={ble.keyBotState.status === KeyBotState.KEYBOT_PRESSING_LEFT || ble.keyBotState.status === KeyBotState.KEYBOT_PRESSING_RIGHT}
-                onPress={() =>
-                  dispatch(keyBotCommand({ command: KeyBotCommand.KEYBOT_PRESS_RIGHT}))
+                onPress={() => {
+                  if (!switchUnlockDirection) {
+
+                    dispatch(keyBotCommand({ command: KeyBotCommand.KEYBOT_PRESS_LEFT }))
+                    console.log("pressing left");
+                  } else {
+                    dispatch(keyBotCommand({ command: KeyBotCommand.KEYBOT_PRESS_RIGHT }))
+                    console.log("pressing right");
+                  }
+                }
                 }
 
               >
                 Lock
               </Button>
+              <Paragraph
+                onPress={() => {
+                  Toast.show("Switched unlock direction", {
+                    duration: Toast.durations.LONG,
+                    position: Toast.positions.CENTER,
+                    shadow: true,
+                    animation: true,
+                    hideOnPress: true,
+                    delay: 0,
+                    backgroundColor: theme.colors.primary,
+                  });
+                  updateKeyBotUnlockDirection(KeyBot.id, !switchUnlockDirection);
+                  setSwitchUnlockDirection(!switchUnlockDirection);
+                }}
+                style={{ marginTop: 20, color: theme.colors.primary }}
+
+              >Didn't unlock? Switch the direction</Paragraph>
 
             </View>
             <View key="2" style={styles.page}>
@@ -439,10 +483,10 @@ export default function ConnectToTheBox() {
                   router.replace("/client/");
 
                 }}>
-                
+
                 OK
               </Button>
-              <Button 
+              <Button
                 icon="close"
                 style={{ marginTop: 20 }}
                 contentStyle={{ height: 80, width: 200, }}
@@ -456,9 +500,9 @@ export default function ConnectToTheBox() {
               </Button>
 
             </View>
-            
-            
-         
+
+
+
 
           </PagerView>
         ) : (
