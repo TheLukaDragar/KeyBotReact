@@ -48,6 +48,13 @@ export enum KeyBotCommand{
     KEYBOT_CENTER = '3',
 }
 
+export enum MotorTimeoutCommand{
+    MOTOR_TIMEOUT_INCREASE = '0',
+    MOTOR_TIMEOUT_DECREASE = '1',
+    MOTOR_TIMEOUT_RESET = '2',
+}
+
+
 export enum KeyBotState {
     KEYBOT_STATE_IDLE = '0',
     KEYBOT_PRESSING_LEFT = '1',
@@ -147,6 +154,10 @@ export interface manualMotorControlParams {
 export interface keybotCommandParams {
     command: KeyBotCommand
 }
+export interface motorTimeoutCommandParams {
+    command: MotorTimeoutCommand
+}
+
 
 
 

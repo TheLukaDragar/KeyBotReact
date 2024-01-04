@@ -30,13 +30,7 @@ export default function Layout() {
             }
         }
         />
-         <Stack.Screen name="[id]/control"
-        options={
-            {
-                animation: "slide_from_bottom",
-            }
-        }
-        />
+       
 
       
 

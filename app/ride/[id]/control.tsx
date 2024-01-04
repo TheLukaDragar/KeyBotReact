@@ -23,9 +23,10 @@ import {
   disconnectDevice, getChallenge,
   keyBotCommand,
   manualMotorControl,
+  motorTimeoutSetting,
   subscribeToEvents
 } from '../../../ble/bleSlice';
-import { KeyBotCommand, ManualMotorControlCommand } from '../../../ble/bleSlice.contracts';
+import { KeyBotCommand, ManualMotorControlCommand, MotorTimeoutCommand } from '../../../ble/bleSlice.contracts';
 import { PreciseLocation, getErrorMessage, isErrorWithMessage, isFetchBaseQueryError, useLazyGetBoxAccessKeyQuery, useLazyGetBoxPreciseLocationQuery } from '../../../data/api';
 import { callDatasetContract } from '../../../data/blockchain';
 import { getLocation } from '../../../utils/getlocation';
@@ -422,6 +423,49 @@ export default function TabOneScreen({ navigation }: RootTabScreenProps<'TabOne'
         </Button>
 
       </View>
+      <Text
+        style={{ marginVertical: 10 }}
+
+
+      >Motor movement limit:</Text>
+      <View style={{ flexDirection: 'row' }}>
+
+
+        <Button
+          icon="minus"
+          mode="outlined"
+          onPress={() =>
+            dispatch(motorTimeoutSetting({ command: MotorTimeoutCommand.MOTOR_TIMEOUT_DECREASE }))
+          }
+          style={styles.buttonStyle}
+        >
+          decrease
+        </Button>
+        <Button
+          icon="plus"
+          mode="outlined"
+          onPress={() =>
+            dispatch(motorTimeoutSetting({ command: MotorTimeoutCommand.MOTOR_TIMEOUT_INCREASE }))
+          }
+          style={styles.buttonStyle}
+        >
+          increase
+        </Button>
+
+
+
+      </View>
+
+      <Button
+        icon=""
+        mode="outlined"
+        onPress={() =>
+          dispatch(motorTimeoutSetting({ command: MotorTimeoutCommand.MOTOR_TIMEOUT_RESET }))
+        }
+        style={styles.buttonStyle}
+      >
+        reset
+      </Button>
       <View style={styles.logSection}>
         <ScrollView
           ref={scrollViewRef}
@@ -458,6 +502,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingBottom: 20,
+    paddingTop: 20,
   },
   buttonStyle: {
     margin: 5,

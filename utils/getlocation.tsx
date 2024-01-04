@@ -3,7 +3,8 @@ import { Platform } from 'react-native'
 
 let cachedLocation: LocationObject | null = null
 let cacheTimestamp: number | null = null
-const CACHE_DURATION = 3 * 60 * 1000 // 5 minutes in milliseconds
+
+const CACHE_DURATION = 5 * 60 * 1000 // 5 minutes in milliseconds
 
 function delay(timeInMilliseconds: number) {
     return new Promise<null>((resolve) => {
@@ -38,8 +39,8 @@ export async function getLocation(fresh = false) {
         try {
             location = await getLastKnownPositionAsync(
                 {
-                    maxAge: 5 * 60 * 1000, // 5 minutes in milliseconds
-                    requiredAccuracy: LocationAccuracy.BestForNavigation,
+                    maxAge: 10 * 60 * 1000, // 5 minutes in milliseconds
+                    requiredAccuracy: LocationAccuracy.Balanced,
                 },
 
             )
@@ -63,7 +64,7 @@ export async function getLocation(fresh = false) {
                 location = await Promise.race([
                     delay(DELAY_IN_MS),
                     getCurrentPositionAsync({
-                        accuracy: LocationAccuracy.BestForNavigation,
+                        accuracy: fresh ? LocationAccuracy.Highest : LocationAccuracy.Balanced,
                         distanceInterval: 0,
                     }),
                 ])
@@ -85,6 +86,7 @@ export async function getLocation(fresh = false) {
         const error = locationError ?? new Error('💣')
         throw error
     }
+    console.log('returning location', JSON.stringify(location))
 
     cachedLocation = location
     cacheTimestamp = Date.now()
@@ -92,6 +94,13 @@ export async function getLocation(fresh = false) {
     setTimeout(() => {
         cachedLocation = null
         cacheTimestamp = null
+
+        //refresh location
+        console.log('refreshing location cache...')
+        getLocation(true)
+
+
+
     }, CACHE_DURATION)
 
     return location

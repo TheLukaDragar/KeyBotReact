@@ -2,11 +2,11 @@ import { createAsyncThunk, createSlice } from '@reduxjs/toolkit';
 import { Buffer } from 'buffer';
 import CryptoES from 'crypto-es';
 import Constants from 'expo-constants';
+import * as thisDevice from 'expo-device';
+import { PermissionsAndroid, Platform } from 'react-native';
 import { BleManager, Device } from 'react-native-ble-plx';
 import { RootState } from '../data/store';
-import { ConnectionState, KeyBotCommand, KeyBotState, MidSensorState, NetworkState, SensorState, authenticateDeviceParams, bleSliceInterface, connectDeviceByIdParams, keybotCommandParams, manualMotorControlParams, testbuttonParams, toBLEDeviceVM } from './bleSlice.contracts';
-import { PermissionsAndroid, Platform } from 'react-native';
-import * as thisDevice from 'expo-device';
+import { ConnectionState, KeyBotCommand, KeyBotState, MidSensorState, NetworkState, SensorState, authenticateDeviceParams, bleSliceInterface, connectDeviceByIdParams, keybotCommandParams, manualMotorControlParams, motorTimeoutCommandParams, toBLEDeviceVM } from './bleSlice.contracts';
 
 const bleManager = new BleManager();
 let device: Device;
@@ -89,7 +89,7 @@ export const scanBleDevices = createAsyncThunk('ble/scanBleDevices', async (_, t
         return;
     }
 
-    
+
     const granted = await new Promise(resolve => requestPermissions(resolve));
     if (!granted) {
         throw new Error('Ble permission not granted');
@@ -387,18 +387,27 @@ export const subscribeToEvents = createAsyncThunk('ble/subscribeToEvents', async
 }
 );
 
-export const testbutton = createAsyncThunk('ble/testbutton', async (params: testbuttonParams, thunkAPI) => {
+export const motorTimeoutSetting = createAsyncThunk('ble/motorTimeoutSetting', async (params: motorTimeoutCommandParams, thunkAPI) => {
     //write test characteristic 00002a3d-0000-1000-8000-00805f9b34f0
-    bleManager.writeCharacteristicWithResponseForDevice(device.id, '00001815-0000-1000-8000-00805f9b34fb', '00002a3d-0000-1000-8000-00805f9b34f0', 'AQ==').then((characteristic) => {
+
+    const command = params.command;
+
+    console.log("motorTimeoutSetting: " + command);
+    //to base64
+    const commandBase64 = Buffer.from(command).toString('base64');
+
+
+
+    bleManager.writeCharacteristicWithResponseForDevice(device.id, '00001815-0000-1000-8000-00805f9b34fb', '00002a3d-0000-1000-8000-00805f9b34f0', commandBase64).then((characteristic) => {
         if (characteristic === null) {
-            console.log("testbutton Characteristic not found");
+            console.log("motorTimeoutSetting Characteristic not found");
             return;
         }
         let status = Buffer.from(characteristic.value!, 'base64').toString('ascii');
-        console.log("testbutton: " + status);
+        console.log("motorTimeoutSetting: " + status);
         return status;
     }).catch((error) => {
-        console.log("testbutton error: " + error);
+        console.log("motorTimeoutSetting error: " + error);
         return error;
     }
     );
@@ -416,12 +425,13 @@ export const manualMotorControl = createAsyncThunk('ble/manualMotorControl', asy
         let status = Buffer.from(characteristic.value!, 'base64').toString('ascii');
         console.log("manualMotorControl: " + status);
         return status;
-    }
-    ).catch((error) => {
+    }).catch((error) => {
         console.log("manualMotorControl error: " + error);
         return error;
     }
     );
+
+
 });
 
 //keybot command
@@ -728,7 +738,7 @@ const bleSlice = createSlice({
             }
         },
         resetConnectionState(state, action) {
-        
+
 
 
 
@@ -838,7 +848,7 @@ const bleSlice = createSlice({
 });
 export default bleSlice.reducer;
 export const { setAdapterState, setLocationPermissionStatus, setConnectedDevice, addScannedDevice, clearScannedDevices, stopDeviceScan, setDemoMode, addLog
-    , updateKeySensorStatus, updateMidSensorsStatus, updateKeyBotState, updateBatteryLevel, setConnectionState,resetConnectionState } = bleSlice.actions;
+    , updateKeySensorStatus, updateMidSensorsStatus, updateKeyBotState, updateBatteryLevel, setConnectionState, resetConnectionState } = bleSlice.actions;
 export const selectAdapterState = (state: RootState) => state.ble.adapterState;
 export const selectConnectedDevice = (state: RootState) => state.ble.connectedDevice;
 export const selectScannedDevices = (state: RootState) => state.ble.deviceScan;
