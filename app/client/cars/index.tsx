@@ -107,7 +107,7 @@ export default function CarsInfiniteScroll() {
 
     //check if there are any favourite cars and if there are sort them to the top
     console.log("favouriteCarssss", userFavouriteCars);
-    if (userFavouriteCars.length > 0) {
+    if (userFavouriteCars && userFavouriteCars.length > 0) {
       //sort so that the selected car is first
       console.log("favouriteCars", userFavouriteCars);
       console.log("carss ids", carss.map(car => car.id));
@@ -151,7 +151,9 @@ export default function CarsInfiniteScroll() {
 
     //add favourite property to cars
     sortedCars = sortedCars.map(car => {
-      if (userFavouriteCars.includes(car.id)) {
+      if ( userFavouriteCars &&
+        userFavouriteCars.length > 0 &&
+        userFavouriteCars.includes(car.id)) {
         return { ...car, favourite: true };
       }
       else {
