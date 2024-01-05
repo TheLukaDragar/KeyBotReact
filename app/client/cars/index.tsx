@@ -646,7 +646,7 @@ export default function CarsInfiniteScroll() {
                             setSelectedCar(selectedCar);
                             router.push("/client/cars/" + selectedCar.id);
                           }}>
-                          Choose
+                          {selectedCar.current_userId !== null && selectedCar.current_userId !== undefined ? "In use" : "Choose"}
                         </Button>
                       </Card.Actions>
                     </View>
@@ -737,7 +737,8 @@ export default function CarsInfiniteScroll() {
                       router.push("/client/cars/" + item.id);
                       // rideCar(item);
                     }}>
-                    Choose
+                    {item.current_userId !== null && item.current_userId !== undefined ? "In use" : "Choose"}
+
                   </Button>
 
                   {item.id === inUseCar?.id ? (
@@ -749,7 +750,7 @@ export default function CarsInfiniteScroll() {
                       onPress={() => {
                         router.push("ride/" + item.current_rideId + "/progress");
                       }}>
-                      View
+                      My Ride
                     </Button>
 
 

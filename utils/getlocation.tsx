@@ -64,7 +64,7 @@ export async function getLocation(fresh = false) {
                 location = await Promise.race([
                     delay(DELAY_IN_MS),
                     getCurrentPositionAsync({
-                        accuracy: fresh ? LocationAccuracy.Highest : LocationAccuracy.Balanced,
+                        accuracy: fresh ? LocationAccuracy.Balanced : LocationAccuracy.Balanced,
                         distanceInterval: 0,
                     }),
                 ])

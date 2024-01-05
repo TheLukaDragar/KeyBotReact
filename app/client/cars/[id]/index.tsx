@@ -170,7 +170,7 @@ export default function KeyBotDetails() {
       let d = distance(location.coords, car.location);
 
       let formattedDistance;
-      if (d < 1000) {
+      if (d < 100) {
         formattedDistance = d.toFixed(2) + "m";
       } else {
         formattedDistance = (d / 1000).toFixed(2) + "km";
@@ -404,7 +404,7 @@ export default function KeyBotDetails() {
               alignItems: 'center',
             }}
 
-            // disabled={getDistance(Car).rawDistance > 1000 }
+            disabled={getDistance(Car).rawDistance > 1000 }
 
             contentStyle={{ height: 60, width: 120 }}
             mode='contained'

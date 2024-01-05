@@ -343,6 +343,21 @@ export default function ConnectToTheBox() {
 
 
 
+  //on first mount start connecting to the box
+  useEffect(() => {
+    if (KeyBot && ble.deviceConnectionState.status !== 'ready') {
+      BleConnect(KeyBot);
+    }
+  }, [KeyBot]);
+
+
+  //if we are on first page and we are connected to the box then go to next page
+  useEffect(() => {
+    if (page == 0 && ble.deviceConnectionState.status === 'ready') {
+      pagerRef.current?.setPage(1);
+    }
+  }, [ble.deviceConnectionState.status]);
+
 
 
 

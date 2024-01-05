@@ -28,11 +28,11 @@ export default function Profile() {
           <Caption>Email: {user.email || 'not provided'}</Caption>
 
           <Divider style={styles.divider} />
-
+{/* 
           <Caption>
             {JSON.stringify(user)}
 
-          </Caption>
+          </Caption> */}
 
 
 
