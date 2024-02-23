@@ -268,6 +268,11 @@ export default function StartRide() {
               <><ActivityIndicator size='large' /><Title style={[styles.title, { opacity: 1 }]}>{statusMessage}</Title></>
 
             )}
+             {(ble.deviceConnectionState.status === ConnectionState.ERROR) && (
+              <><Title style={[styles.title, { opacity: 1 }]}>{ble.deviceConnectionState.error}</Title>
+              </>
+
+            )}
 
 
 

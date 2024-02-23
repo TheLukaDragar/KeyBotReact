@@ -286,6 +286,13 @@ export default function EndRide() {
 
             )}
 
+            
+            {(ble.deviceConnectionState.status === ConnectionState.ERROR) && (
+              <><Title style={[styles.title, { opacity: 1 }]}>{ble.deviceConnectionState.error}</Title>
+              </>
+
+            )}
+
 
 
             {/* <Title style={[styles.title, { opacity: 1 }]}>{ble.deviceConnectionState.status}</Title> */}
