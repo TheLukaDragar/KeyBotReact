@@ -65,9 +65,7 @@ export default function CarsInfiniteScroll() {
       return;
     }
 
-    let location = await getLocation();
-    setLocation(location);
-
+    
 
 
     const snapshot = await query.get();
@@ -171,6 +169,23 @@ export default function CarsInfiniteScroll() {
 
 
   };
+
+  //use effect for location
+  useEffect(() => {
+    (async () => {
+
+      let { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        alert('Permission to access location was denied');
+        return;
+      }
+
+      let location = await getLocation();
+      setLocation(location);
+    })();
+
+  }, []);
+
 
   const loadMoreCars = useCallback(async () => {
 

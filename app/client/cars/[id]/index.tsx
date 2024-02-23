@@ -1,5 +1,6 @@
 import database from '@react-native-firebase/database';
 import firestore from '@react-native-firebase/firestore';
+import CryptoES from 'crypto-es';
 import * as ImagePicker from 'expo-image-picker';
 import * as Location from 'expo-location';
 import { LocationObject } from 'expo-location';
@@ -7,13 +8,16 @@ import { useLocalSearchParams, useNavigation, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Image, ScrollView, StyleSheet } from 'react-native';
 import MapView, { Marker } from 'react-native-maps';
-import { Button, Divider, IconButton, Title, useTheme } from 'react-native-paper';
+import { Avatar, Button, Divider, IconButton, Title, useTheme } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../../../../auth/provider';
+import { authenticate, connectDeviceById, getChallenge, subscribeToEvents } from '../../../../ble/bleSlice';
 import { Text, View, getTheme } from '../../../../components/Themed';
 import { getErrorMessage } from '../../../../data/api';
+import { useAppDispatch, useAppSelector } from '../../../../data/hooks';
 import { getLocation } from '../../../../utils/getlocation';
 import React = require('react');
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 
 
 export default function KeyBotDetails() {
@@ -22,6 +26,10 @@ export default function KeyBotDetails() {
   const insets = useSafeAreaInsets();
   const { id = -1 } = useLocalSearchParams();
   const navigation = useNavigation();
+  const dispatch = useAppDispatch();
+  const ble = useAppSelector((state) => state.ble);
+
+
 
 
 
@@ -31,7 +39,8 @@ export default function KeyBotDetails() {
   // const [setBoxPreciseLocation, { isLoading: isSettingLocation }] = useSetBoxPreciseLocationMutation();
 
 
-  const [Car, setBoxDetails] = useState<any | undefined>(undefined);
+  const [Car, setCarDetails] = useState<any | undefined>(undefined);
+  const [KeyBot, setKeyBotDetails] = useState<any | undefined>(undefined);
   const [initialBoxDetails, setInitialBoxDetails] = useState<any | undefined>(undefined);
   //isUpdating
   const [isUpdating, setIsUpdating] = useState(false);
@@ -66,6 +75,70 @@ export default function KeyBotDetails() {
 
 
 
+  async function BleConnect(keybot: any) {
+    try {
+
+      //0.get more details about the box
+      console.log("callin getKeyBot with id", keybot.id);
+      // const KeyBot = await getKeyBot(box.id).unwrap();
+
+      // console.log("KeyBot",KeyBot);
+
+
+
+      // 1. Connect to device
+      const connectResult = await dispatch(connectDeviceById({ id: keybot.mac })).unwrap();
+      console.log("connectResult", connectResult);
+
+      // 2. Get the challenge
+      const challenge = await dispatch(getChallenge()).unwrap();
+      console.log("challenge", challenge);
+
+
+
+      //For now we do this locally then we will do it on the server
+      let key = keybot.key;
+      const key128Bits = CryptoES.enc.Utf8.parse(key);
+      //ecb mode
+      const encrypted = CryptoES.AES.encrypt(challenge, key128Bits, { mode: CryptoES.mode.ECB, padding: CryptoES.pad.NoPadding });
+      //to hex
+      let encryptedHex = encrypted.ciphertext.toString(CryptoES.enc.Hex);
+      //to uppercase
+      encryptedHex = encryptedHex.toUpperCase();
+      console.log("encrypted: " + encryptedHex);
+      let solved_challenge = encryptedHex
+
+
+      // 4. Authenticate
+      const auth = await dispatch(authenticate({ solved_challenge: solved_challenge })).unwrap();
+      console.log(auth);
+
+      if (auth) {
+        console.log("authenticated");
+
+        // 5. Subscribe to events and init commands
+
+        const events = await dispatch(subscribeToEvents()).unwrap();
+
+
+      } else {
+        console.log("not authenticated");
+      }
+
+
+    } catch (err) {
+      //do nothing for now 
+      console.log(err);
+
+    }
+
+
+
+
+  }
+
+
+
 
   useEffect(() => {
     async function get_car_details() {
@@ -88,12 +161,31 @@ export default function KeyBotDetails() {
 
         const car_details = await firestore().collection('Cars').doc(id).get();
 
+        //get keybot
+        const keybot = await car_details.data().keybotId.get().then(doc => doc.data());
+        console.log("keybot", keybot);
+        setKeyBotDetails(keybot);
+
+
+        //check if device already connected
+        if (ble.connectedDevice?.id === keybot?.id && ble.deviceConnectionState.status === 'ready') {
+          //already connected do nothing
+        }
+        else {
+          //connect to device in the background to make it ready for use 
+          BleConnect(keybot);
+
+
+        }
+
+
+
 
 
 
         // console.log("car_details", car_details.data());
 
-        setBoxDetails({ ...car_details.data(), id: id });
+        setCarDetails({ ...car_details.data(), id: id });
 
 
         console.log("set license plate", car_details.data().licensePlate);
@@ -321,7 +413,26 @@ export default function KeyBotDetails() {
   };
 
 
+  function StatusIcon({ status }: { status: string }) {
+    let iconName = "" as "sync" | "circle" | "alert-circle";
+    let iconColor = "";
 
+    //searching,connecting,authenticated,ready,disconnected
+  
+    if (status === "searching" || status === "connecting" || status === "authenticating") {
+      iconName = "sync";
+      iconColor = "#FFFF33";  // Electric Yellow
+    } else if (status === "ready") {
+      iconName = "circle";
+      iconColor = "#39FF14";  // Neon Green
+    } else {
+      iconName = "alert-circle";
+      iconColor = "#FF0033";  // Electric Red
+    }
+  
+  
+    return <MaterialCommunityIcons name={iconName} color={iconColor} size={12} style={{ marginRight: 40, paddingBottom: 12 }} />;
+  }
 
   return (
 
@@ -360,7 +471,11 @@ export default function KeyBotDetails() {
 
           {
             Car?.imageURL ? (
-              <Image source={{ uri: Car.imageURL }} style={styles.image} />
+              <><Image source={{ uri: Car.imageURL }} style={styles.image} /><View style={{ position: 'absolute', top:0, left:0, backgroundColor: 'transparent', borderRadius: 10, marginTop:30,marginLeft:10}}>
+                <StatusIcon status={ble.deviceConnectionState.status} />
+              </View></>
+
+              
             ) : (
               <Text>No image uploaded</Text>
             )
@@ -404,7 +519,7 @@ export default function KeyBotDetails() {
               alignItems: 'center',
             }}
 
-            disabled={getDistance(Car).rawDistance > 1000 }
+            // disabled={getDistance(Car).rawDistance > 1000}
 
             contentStyle={{ height: 60, width: 120 }}
             mode='contained'
@@ -456,6 +571,7 @@ export default function KeyBotDetails() {
 
 
           </Text>
+         
 
         </View>
 
