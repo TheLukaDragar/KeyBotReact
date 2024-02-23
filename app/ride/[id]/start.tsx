@@ -21,7 +21,7 @@ export default function StartRide() {
   const [ride, setRide] = useState(null);
   const [location, setLocation] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [statusMessage, setStatusMessage] = useState('test message');
+  const [statusMessage, setStatusMessage] = useState('');
   const params = useLocalSearchParams();
   const dispatch = useAppDispatch();
   const router = useRouter();
@@ -86,15 +86,15 @@ export default function StartRide() {
         console.error("Error fetching location: ", error);
         setIsLoading(false);
         setStatusMessage("Error fetching location. Please check your permissions.");
-        Toast.show("Error fetching location: " + error.message, {
-          duration: Toast.durations.LONG,
-          position: Toast.positions.BOTTOM,
-          shadow: true,
-          animation: true,
-          hideOnPress: true,
-          delay: 0,
-          backgroundColor: theme.colors.error,
-        });
+        // Toast.show("Error fetching location: " + error.message, {
+        //   duration: Toast.durations.LONG,
+        //   position: Toast.positions.BOTTOM,
+        //   shadow: true,
+        //   animation: true,
+        //   hideOnPress: true,
+        //   delay: 0,
+        //   backgroundColor: theme.colors.error,
+        // });
       }
     };
 
@@ -111,10 +111,11 @@ export default function StartRide() {
 
   async function BleConnect(keybot) {
     try {
-
+      setStatusMessage("Connecting to the keybot...");
       const connectResult = await dispatch(connectDeviceById({ id: keybot.mac })).unwrap();
       console.log("connectResult", connectResult);
 
+      setStatusMessage("Authenticating...");
       const challenge = await dispatch(getChallenge()).unwrap();
       console.log("challenge", challenge);
 
@@ -128,27 +129,31 @@ export default function StartRide() {
       const auth = await dispatch(authenticate({ solved_challenge })).unwrap();
       console.log(auth);
 
+
       if (auth) {
+        console.log("Authentication successful");
         const events = await dispatch(subscribeToEvents()).unwrap();
 
       } else {
+        setStatusMessage("Authentication failed");
         console.log("Authentication failed");
+
+        throw new Error("Authentication failed");
       }
     } catch (err) {
       console.error("Error connecting to the keybot: ", err);
-      setStatusMessage("Error: " + err.message);
-      Toast.show(getErrorMessage(err), {
-        duration: Toast.durations.LONG,
-        position: Toast.positions.BOTTOM,
-        shadow: true,
-        animation: true,
-        hideOnPress: true,
-        delay: 0,
-        backgroundColor: theme.colors.error,
-      });
+      setStatusMessage("Failed to connect to the keybot.");
+      // Toast.show(getErrorMessage(err), {
+      //   duration: Toast.durations.LONG,
+      //   position: Toast.positions.BOTTOM,
+      //   shadow: true,
+      //   animation: true,
+      //   hideOnPress: true,
+      //   delay: 0,
+      //   backgroundColor: theme.colors.error,
+      // });
     }
   }
-
 
   function checkConnection(mac: string) {
     console.log("ble.deviceConnectionState.status", ble.deviceConnectionState.status);
@@ -201,6 +206,49 @@ export default function StartRide() {
 
   }, [KeyBot, ble.deviceConnectionState.status, ble.connectedDevice?.id]);
 
+
+  //
+
+  const cancelride = async () => {
+    try {
+      //set the realtime properties
+      let rideRef = database().ref('Rides').child(String(params.id));
+      rideRef.update({
+        startTime: database.ServerValue.TIMESTAMP,
+        status: "Cancelled",
+
+      });
+
+
+      //update Car status
+      let carRef = firestore().collection('Cars').doc(ride.carId);
+      carRef.update({
+        status: "Available",
+        current_rideId: null,
+        current_userId: null,
+
+        // location: {
+        //   latitude: location?.coords.latitude,
+        //   longitude: location?.coords.longitude,
+        // }
+
+      });
+
+      //disconect from keybor
+      BleDisconnect();
+
+      //navigate to main
+
+
+
+      // Unsubscribe from the listener when it's no longer needed
+      return () => rideRef.off();
+    } catch (error) {
+      console.error("Error fetching ride: ", error);
+      alert("Error fetching ride: " + error);
+      // Handle the error as you need here
+    }
+  }
 
 
 
@@ -263,15 +311,31 @@ export default function StartRide() {
         ) : (
           <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
 
-            {(ble.deviceConnectionState.status !== ConnectionState.READY && ble.deviceConnectionState.status !== ConnectionState.ERROR) || (ble.keyBotState.status === KeyBotState.KEYBOT_PRESSING_LEFT || ble.keyBotState.status === KeyBotState.KEYBOT_PRESSING_RIGHT) && (
+            {(isLoading) || (ble.deviceConnectionState.status !== ConnectionState.READY && ble.deviceConnectionState.status !== ConnectionState.ERROR) || (ble.keyBotState.status === KeyBotState.KEYBOT_PRESSING_LEFT || ble.keyBotState.status === KeyBotState.KEYBOT_PRESSING_RIGHT) && (
 
-              <><ActivityIndicator size='large' /><Title style={[styles.title, { opacity: 1 }]}>{statusMessage}</Title></>
+              <><ActivityIndicator size='large' /></>
 
             )}
-             {(ble.deviceConnectionState.status === ConnectionState.ERROR) && (
-              <><Title style={[styles.title, { opacity: 1 }]}>{ble.deviceConnectionState.error}</Title>
-              </>
 
+
+
+            {(statusMessage !== "Did the car unlock?" && statusMessage !== "The car didn't unlock. Please try again.") && (
+              <Title style={[styles.title, { opacity: 1 }]}>{statusMessage}</Title>
+            )}
+
+            {(ble.deviceConnectionState.status === ConnectionState.ERROR) && (
+              <><TouchableOpacity onPress={() => {
+                BleConnect(KeyBot);
+              
+              }
+              }>
+                <Paragraph style={{ margin: 20, color: theme.colors.primary }}>
+                  Try again
+                </Paragraph>
+
+              </TouchableOpacity>
+
+              </>
             )}
 
 
@@ -326,12 +390,21 @@ export default function StartRide() {
           </View>
         )}
       </Animated.View>
-      <View style={{ flex: 1 }}>
+      <View style={{ flex: 2 }}>
         {statusMessage === "Error fetching location. Please check your permissions." && (
           <Button mode="contained" onPress={() => router.back()} style={{ margin: 20 }}>
             Go back
           </Button>
         )}
+  
+        <Button  onPress={() => {
+          cancelride();
+          router.replace("/client");
+        }
+        } style={{ margin: 20 }}>
+
+          Cancel
+        </Button>
       </View>
     </View>
   );
@@ -358,7 +431,7 @@ const styles = StyleSheet.create({
   },
   title: {
     textAlign: "center", marginBottom: 10, //bold
-    fontWeight: "bold", fontSize: 25, marginTop: 20
+    fontWeight: "bold", fontSize: 23, marginTop: 20
   },
   titlesmall: {
     textAlign: "center", marginBottom: 0, //bold

@@ -21,7 +21,7 @@ export default function EndRide() {
   const [ride, setRide] = useState(null);
   const [location, setLocation] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [statusMessage, setStatusMessage] = useState('test message');
+  const [statusMessage, setStatusMessage] = useState('');
   const params = useLocalSearchParams();
   const dispatch = useAppDispatch();
   const router = useRouter();
@@ -30,6 +30,8 @@ export default function EndRide() {
 
 
   const [switchUnlockDirection, setSwitchUnlockDirection] = useState(false);
+
+
 
 
   useEffect(() => {
@@ -86,15 +88,15 @@ export default function EndRide() {
         console.error("Error fetching location: ", error);
         setIsLoading(false);
         setStatusMessage("Error fetching location. Please check your permissions.");
-        Toast.show("Error fetching location: " + error.message, {
-          duration: Toast.durations.LONG,
-          position: Toast.positions.BOTTOM,
-          shadow: true,
-          animation: true,
-          hideOnPress: true,
-          delay: 0,
-          backgroundColor: theme.colors.error,
-        });
+        // Toast.show("Error fetching location: " + error.message, {
+        //   duration: Toast.durations.LONG,
+        //   position: Toast.positions.BOTTOM,
+        //   shadow: true,
+        //   animation: true,
+        //   hideOnPress: true,
+        //   delay: 0,
+        //   backgroundColor: theme.colors.error,
+        // });
       }
     };
 
@@ -111,10 +113,11 @@ export default function EndRide() {
 
   async function BleConnect(keybot) {
     try {
-
+      setStatusMessage("Connecting to the keybot...");
       const connectResult = await dispatch(connectDeviceById({ id: keybot.mac })).unwrap();
       console.log("connectResult", connectResult);
 
+      setStatusMessage("Authenticating...");
       const challenge = await dispatch(getChallenge()).unwrap();
       console.log("challenge", challenge);
 
@@ -128,24 +131,28 @@ export default function EndRide() {
       const auth = await dispatch(authenticate({ solved_challenge })).unwrap();
       console.log(auth);
 
+
       if (auth) {
+        console.log("Authentication successful");
         const events = await dispatch(subscribeToEvents()).unwrap();
 
       } else {
+        setStatusMessage("Authentication failed");
+        throw new Error("Authentication failed");
         console.log("Authentication failed");
       }
     } catch (err) {
       console.error("Error connecting to the keybot: ", err);
-      setStatusMessage("Error: " + err.message);
-      Toast.show(getErrorMessage(err), {
-        duration: Toast.durations.LONG,
-        position: Toast.positions.BOTTOM,
-        shadow: true,
-        animation: true,
-        hideOnPress: true,
-        delay: 0,
-        backgroundColor: theme.colors.error,
-      });
+      setStatusMessage("Failed to connect to the keybot.");
+      // Toast.show(getErrorMessage(err), {
+      //   duration: Toast.durations.LONG,
+      //   position: Toast.positions.BOTTOM,
+      //   shadow: true,
+      //   animation: true,
+      //   hideOnPress: true,
+      //   delay: 0,
+      //   backgroundColor: theme.colors.error,
+      // });
     }
   }
 
@@ -277,79 +284,111 @@ export default function EndRide() {
         entering={FadeInUp.duration(1000).springify()}
         style={{ flex: 10 }}
       >
-       
-          <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
 
-            {(isLoading) || (ble.deviceConnectionState.status !== ConnectionState.READY && ble.deviceConnectionState.status !== ConnectionState.ERROR) || (ble.keyBotState.status === KeyBotState.KEYBOT_PRESSING_LEFT || ble.keyBotState.status === KeyBotState.KEYBOT_PRESSING_RIGHT) && (
+        <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
 
-              <><ActivityIndicator size='large' /><Title style={[styles.title, { opacity: 1 }]}>{statusMessage}</Title></>
+          {(isLoading) || (ble.deviceConnectionState.status !== ConnectionState.READY && ble.deviceConnectionState.status !== ConnectionState.ERROR) || (ble.keyBotState.status === KeyBotState.KEYBOT_PRESSING_LEFT || ble.keyBotState.status === KeyBotState.KEYBOT_PRESSING_RIGHT) && (
 
-            )}
+            <><ActivityIndicator size='large' /></>
 
-            
-            {(ble.deviceConnectionState.status === ConnectionState.ERROR) && (
-              <><Title style={[styles.title, { opacity: 1 }]}>{ble.deviceConnectionState.error}</Title>
-              </>
-
-            )}
+          )}
 
 
 
-            {/* <Title style={[styles.title, { opacity: 1 }]}>{ble.deviceConnectionState.status}</Title> */}
+          {(statusMessage !== "Did the car lock?" && statusMessage !== "The car didn't lock. Please try again.") && (
+            <Title style={[styles.title, { opacity: 1 }]}>{statusMessage}</Title>
+          )}
 
-            {(statusMessage === "Did the car lock?" || statusMessage === "The car didn't lock. Please try again.") && (
-              <Animated.View
-                entering={FadeIn.duration(1000).springify()}
-                style={{ flex: 1, alignItems: "center", justifyContent: "center" }}
-              >
+          {(ble.deviceConnectionState.status === ConnectionState.ERROR) && (
+            <><TouchableOpacity onPress={() => {
+              BleConnect(KeyBot);
+              endRide();
+            }
+            }>
+              <Paragraph style={{ margin: 20, color: theme.colors.primary }}>
+                Try again
+              </Paragraph>
 
-                <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
-                  <Title style={styles.title}>{statusMessage}</Title>
+            </TouchableOpacity>
 
-
-                  <TouchableOpacity onPress={() => {
-                    lockCar();
-                  }
-                  }>
-                    <Paragraph style={{ margin: 20, color: theme.colors.primary }}>
-                      No, try again
-                    </Paragraph>
-                  </TouchableOpacity>
-
-                </View>
+            </>
+          )}
 
 
-                {/* <Paragraph style={{ marginTop: 10 }}>
+          {/* 
+          {(ble.deviceConnectionState.status === ConnectionState.ERROR) && (
+            <><Title style={[styles.title, { opacity: 1 }]}>{ble.deviceConnectionState.error}</Title>
+            </>
+
+          )} */}
+
+
+
+
+
+          {/* <Title style={[styles.title, { opacity: 1 }]}>{ble.deviceConnectionState.status}</Title> */}
+
+          {(statusMessage === "Did the car lock?" || statusMessage === "The car didn't lock. Please try again.") && (
+            <Animated.View
+              entering={FadeIn.duration(1000).springify()}
+              style={{ flex: 1, alignItems: "center", justifyContent: "center" }}
+            >
+
+              <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
+                <Title style={styles.title}>{statusMessage}</Title>
+
+
+                <TouchableOpacity onPress={() => {
+                  lockCar();
+                }
+                }>
+                  <Paragraph style={{ margin: 20, color: theme.colors.primary }}>
+                    No, try again
+                  </Paragraph>
+                </TouchableOpacity>
+
+              </View>
+
+
+              {/* <Paragraph style={{ marginTop: 10 }}>
                   {ble.keyBotState.text}
                 </Paragraph> */}
-                <Button
-                  mode="contained"
+              <Button
+                mode="contained"
 
-                  icon="check"
+                icon="check"
 
-                  onPress={() => {
-                    endRide();
+                onPress={() => {
+                  endRide();
 
-                    router.replace("/client/");
-                    
-                  }
-                  }
-                  contentStyle={{ height: 80, width: 200 }}
-                  style={{ marginTop: 50 }}
-                >
-                  Yes
-                </Button>
-              </Animated.View>
-            )}
-          </View>
-        
+                  router.replace("/client/");
+
+                }
+                }
+                contentStyle={{ height: 80, width: 200 }}
+                style={{ marginTop: 50 }}
+              >
+                Yes
+              </Button>
+            </Animated.View>
+          )}
+        </View>
+
       </Animated.View>
-      <View style={{ flex: 1 }}>
+      <View style={{ flex: 2 }}>
         {statusMessage === "Error fetching location. Please check your permissions." && (
           <Button mode="contained" onPress={() => router.back()} style={{ margin: 20 }}>
             Go back
           </Button>
         )}
+
+        <Button onPress={() => {
+          router.back();
+        }
+        } style={{ margin: 20 }}>
+
+          Cancel
+        </Button>
       </View>
     </View>
   );
@@ -376,7 +415,7 @@ const styles = StyleSheet.create({
   },
   title: {
     textAlign: "center", marginBottom: 10, //bold
-    fontWeight: "bold", fontSize: 25, marginTop: 20
+    fontWeight: "bold", fontSize: 23, marginTop: 20
   },
   titlesmall: {
     textAlign: "center", marginBottom: 0, //bold

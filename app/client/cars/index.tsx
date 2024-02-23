@@ -763,7 +763,36 @@ export default function CarsInfiniteScroll() {
                       mode='contained'
                       icon='car-info'
                       onPress={() => {
-                        router.push("ride/" + item.current_rideId + "/progress");
+
+                        //fetch current ride and remove listener immediately
+
+                        let rideRef = database().ref('Rides/' + inUseCar.current_rideId);
+                        rideRef.once('value', (snapshot) => {
+                          console.log("ride", snapshot.val());
+                          if (snapshot.val()) {
+                            console.log("ride found");
+                            const status = snapshot.val().status;
+                            if (status === "Initialised") {
+                              router.push("ride/" + inUseCar.current_rideId + "/start");
+                        
+                            }
+                            else if (status === "In progress") {
+                              router.push("ride/" + inUseCar.current_rideId + "/progress");
+                            }
+                          }
+
+                          else {
+                            alert("Ride not found");
+                          }
+                        });
+
+
+
+
+                  
+
+
+                        // router.push("ride/" + item.current_rideId + "/progress");
                       }}>
                       My Ride
                     </Button>
