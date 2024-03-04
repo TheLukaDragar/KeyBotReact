@@ -317,13 +317,16 @@ export default function TabOneScreen({ navigation }: RootTabScreenProps<'TabOne'
       >
         disconnect
       </Button>
-      <Text> {ble.connectedDevice?.name}</Text>
-      <Text> {ble.sensorStatus.status}</Text>
+      {/* <Text> {ble.connectedDevice?.name}</Text> */}
+      {/* <Text> {ble.sensorStatus.status}</Text> */}
+      <Text>State: {ble.keyBotState.text} </Text>
+
 
       {/* <Text>S1: {ble.midSensorsStatus.sensor_1_status}</Text> */}
-      <Text>S2: {ble.midSensorsStatus.sensor_2_status}</Text>
-      <Text>State: {ble.keyBotState.text}</Text>
+      <View style={{ flexDirection: 'row' }}>
+      <Text>S2: {ble.midSensorsStatus.sensor_2_status} </Text>
       <Text>Battery {ble.batteryLevel.text}</Text>
+      </View>
       <View style={{ flexDirection: 'row' }}>
         {/* <Button
           icon=""
@@ -502,7 +505,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingBottom: 20,
-    paddingTop: 20,
+    paddingTop: 0,
   },
   buttonStyle: {
     margin: 5,

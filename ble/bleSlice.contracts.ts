@@ -68,6 +68,8 @@ export enum KeyBotState {
     KEYBOT_STATE_EMERGENCY_RESET = '9',
     KEYBOT_STATE_CENTERING = ':',
     KEYBOT_ERROR_CENTERING = ';',
+    KEYBOT_STATE_GOING_OVER_MID= '<',
+
   };
 
     

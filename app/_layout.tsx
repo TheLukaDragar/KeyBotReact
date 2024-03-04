@@ -137,6 +137,16 @@ export default function RootLayout(): ReactNode {
                       }}
                     />
 
+                    <Stack.Screen name="ride/[id]/control"
+                      options={{
+                        title: "DEBUG",
+                        headerShown: true,
+
+
+
+                      }}
+                    />
+
                     <Stack.Screen name="client"
                       options={{
                         title: "Courier",

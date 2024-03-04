@@ -326,18 +326,21 @@ export default function KeyBotDetails() {
         console.log("fleetId", fleetId);
 
 
-        let { status } = await Location.requestForegroundPermissionsAsync();
-        if (status !== 'granted') {
-          alert('Permission to access location was denied');
-          return;
-        }
+        const car_loc = keybotRef.data().location;
 
-        let location = await getLocation(true);
-        setLocation(location);
 
-        if (!location) {
-          throw 'Problem getting your location. Please try again';
-        }
+        // let { status } = await Location.requestForegroundPermissionsAsync();
+        // if (status !== 'granted') {
+        //   alert('Permission to access location was denied');
+        //   return;
+        // }
+
+        // let location = await getLocation(true);
+        // setLocation(location);
+
+        // if (!location) {
+        //   throw 'Problem getting your location. Please try again';
+        // }
 
         const newRide = {
           inprogress: false,
@@ -345,16 +348,20 @@ export default function KeyBotDetails() {
           carId: car.id,
           fleetId: fleetId,
           startLocation: {
-            latitude: location.coords.latitude,
-            longitude: location.coords.longitude,
+            latitude: car_loc.latitude,
+             //location.coords.latitude,
+            longitude:  car_loc.longitude,
+            //location.coords.longitude,
           },
           endLocation: {
             latitude: 0,
             longitude: 0,
           },
           currentLocation: {
-            latitude: location.coords.latitude,
-            longitude: location.coords.longitude,
+            latitude:  car_loc.latitude,
+            //location.coords.latitude,
+            longitude: car_loc.longitude,
+            // location.coords.longitude,
           },
           createdAt: firestore.Timestamp.now(),
           startTime: 0,

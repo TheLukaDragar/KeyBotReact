@@ -720,6 +720,10 @@ const bleSlice = createSlice({
 
                     break;
 
+                case KeyBotState.KEYBOT_STATE_GOING_OVER_MID:
+                    state.keyBotState = { status: KeyBotState.KEYBOT_STATE_GOING_OVER_MID, error: '', text: "KEYBOT_STATE_GOING_OVER_MID" };
+                    break;
+
 
                 default:
                     console.warn(`Invalid state: ${status}`);

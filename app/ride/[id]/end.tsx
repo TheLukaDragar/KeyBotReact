@@ -106,6 +106,7 @@ export default function EndRide() {
   useEffect(() => {
     if (KeyBot && ride) {
       if (!checkConnection(KeyBot.mac)) {
+        console.log("keybot not connected, connecting...");
         BleConnect(KeyBot);
       }
     }
@@ -182,11 +183,11 @@ export default function EndRide() {
 
   useEffect(() => {
     if (statusMessage === "Locking the car..." && (ble.keyBotState.status === KeyBotState.KEYBOT_STATE_IDLE || ble.keyBotState.status === KeyBotState.KEYBOT_RETURNING_TO_CENTER_FROM_LEFT || ble.keyBotState.status === KeyBotState.KEYBOT_RETURNING_TO_CENTER_FROM_RIGHT)) {
-      setStatusMessage("Did the car lock?");
+      setStatusMessage("Looks good, did the car lock?");
     }
 
     else if (statusMessage === "Locking the car..." && (ble.keyBotState.status === KeyBotState.KEYBOT_ERROR_PRESSING_LEFT || ble.keyBotState.status === KeyBotState.KEYBOT_ERROR_PRESSING_RIGHT || ble.keyBotState.status === KeyBotState.KEYBOT_ERROR_RETURNING_TO_CENTER_FROM_RIGHT || ble.keyBotState.status === KeyBotState.KEYBOT_ERROR_RETURNING_TO_CENTER_FROM_LEFT)) {
-      setStatusMessage("The car didn't lock. Please try again.");
+      setStatusMessage("Something is off, did the car lock?");
     }
   }
     , [ble.keyBotState.status]);
@@ -295,7 +296,7 @@ export default function EndRide() {
 
 
 
-          {(statusMessage !== "Did the car lock?" && statusMessage !== "The car didn't lock. Please try again.") && (
+          {(statusMessage !== "Looks good, did the car lock?" && statusMessage !== "Something is off, did the car lock?") && (
             <Title style={[styles.title, { opacity: 1 }]}>{statusMessage}</Title>
           )}
 
@@ -328,7 +329,7 @@ export default function EndRide() {
 
           {/* <Title style={[styles.title, { opacity: 1 }]}>{ble.deviceConnectionState.status}</Title> */}
 
-          {(statusMessage === "Did the car lock?" || statusMessage === "The car didn't lock. Please try again.") && (
+          {(statusMessage === "Looks good, did the car lock?" || statusMessage === "Something is off, did the car lock?") && (
             <Animated.View
               entering={FadeIn.duration(1000).springify()}
               style={{ flex: 1, alignItems: "center", justifyContent: "center" }}

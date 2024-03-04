@@ -37,7 +37,8 @@ const BLEManager = () => {
         }
         
         if (connectedDevice) dispatch(disconnectDevice());
-        toast.show('Disconnected from device');
+        // toast.show('Disconnected from device');
+        console.log('BLEManager: disconnectCallback: disconnected');
     }
 
     const checkDevices = async () => {

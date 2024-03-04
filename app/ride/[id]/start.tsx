@@ -31,6 +31,8 @@ export default function StartRide() {
 
   const [switchUnlockDirection, setSwitchUnlockDirection] = useState(false);
 
+  const [keySensed, setKeySensed] = useState(false);
+
 
   useEffect(() => {
     const fetchRideData = async () => {
@@ -169,6 +171,7 @@ export default function StartRide() {
 
   function unlockCar() {
     setStatusMessage("Unlocking the car...");
+    setKeySensed(false);
     if (switchUnlockDirection) {
       dispatch(keyBotCommand({ command: KeyBotCommand.KEYBOT_PRESS_LEFT }));
       console.log("pressing left");
@@ -178,13 +181,39 @@ export default function StartRide() {
     }
   }
 
+  //listen for state changes
+
+
+
+  //remember previous state
+  const prevKeyBotState = useAppSelector((state) => state.ble.keyBotState);
+
+  // useEffect(() => {
+  //   //if status goes from   KEYBOT_PRESSING_LEFT = '1',
+  //   // KEYBOT_PRESSING_RIGHT = '2',
+  //   // KEYBOT_RETURNING_TO_CENTER_FROM_LEFT = '3',
+  //   // KEYBOT_RETURNING_TO_CENTER_FROM_RIGHT = '4',
+
+  //   //its a success
+  //   if ((prevKeyBotState.status === KeyBotState.KEYBOT_PRESSING_LEFT || prevKeyBotState.status === KeyBotState.KEYBOT_PRESSING_RIGHT) && (ble.keyBotState.status === KeyBotState.KEYBOT_RETURNING_TO_CENTER_FROM_LEFT || ble.keyBotState.status === KeyBotState.KEYBOT_RETURNING_TO_CENTER_FROM_RIGHT)) {
+  //     console.log("Sensed key");
+  //     setKeySensed(true);
+  //   }
+
+
+
+    
+  // }
+  //   , [ble.keyBotState.status]);
+
+
   useEffect(() => {
     if (statusMessage === "Unlocking the car..." && (ble.keyBotState.status === KeyBotState.KEYBOT_STATE_IDLE || ble.keyBotState.status === KeyBotState.KEYBOT_RETURNING_TO_CENTER_FROM_LEFT || ble.keyBotState.status === KeyBotState.KEYBOT_RETURNING_TO_CENTER_FROM_RIGHT)) {
-      setStatusMessage("Did the car unlock?");
+      setStatusMessage("Looks good, did the car unlock?");
     }
 
     else if (statusMessage === "Unlocking the car..." && (ble.keyBotState.status === KeyBotState.KEYBOT_ERROR_PRESSING_LEFT || ble.keyBotState.status === KeyBotState.KEYBOT_ERROR_PRESSING_RIGHT || ble.keyBotState.status === KeyBotState.KEYBOT_ERROR_RETURNING_TO_CENTER_FROM_RIGHT || ble.keyBotState.status === KeyBotState.KEYBOT_ERROR_RETURNING_TO_CENTER_FROM_LEFT)) {
-      setStatusMessage("The car didn't unlock. Please try again.");
+      setStatusMessage("Something is off, did the car unlock?");
     }
   }
     , [ble.keyBotState.status]);
@@ -319,11 +348,11 @@ export default function StartRide() {
 
 
 
-            {(statusMessage !== "Did the car unlock?" && statusMessage !== "The car didn't unlock. Please try again.") && (
+            {(statusMessage !== "Looks good, did the car unlock?" && statusMessage !== "Something is off, did the car unlock?") && (
               <Title style={[styles.title, { opacity: 1 }]}>{statusMessage}</Title>
             )}
 
-            {(ble.deviceConnectionState.status === ConnectionState.ERROR) && (
+            {(ble.deviceConnectionState.status === ConnectionState.ERROR  || statusMessage === "Failed to connect to the keybot.") && (
               <><TouchableOpacity onPress={() => {
                 BleConnect(KeyBot);
               
@@ -342,7 +371,7 @@ export default function StartRide() {
 
             {/* <Title style={[styles.title, { opacity: 1 }]}>{ble.deviceConnectionState.status}</Title> */}
 
-            {(statusMessage === "Did the car unlock?" || statusMessage === "The car didn't unlock. Please try again.") && (
+            {(statusMessage === "Looks good, did the car unlock?" || statusMessage === "Something is off, did the car unlock?") && (
               <Animated.View
                 entering={FadeIn.duration(1000).springify()}
                 style={{ flex: 1, alignItems: "center", justifyContent: "center" }}
