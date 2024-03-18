@@ -6,7 +6,7 @@ import * as thisDevice from 'expo-device';
 import { PermissionsAndroid, Platform } from 'react-native';
 import { BleManager, Device } from 'react-native-ble-plx';
 import { RootState } from '../data/store';
-import { ConnectionState, KeyBotCommand, KeyBotState, MidSensorState, NetworkState, SensorState, authenticateDeviceParams, bleSliceInterface, connectDeviceByIdParams, keybotCommandParams, manualMotorControlParams, motorTimeoutCommandParams, toBLEDeviceVM } from './bleSlice.contracts';
+import { ConnectionState, KeyBotCommand, KeyBotState, NetworkState, SensorState, authenticateDeviceParams, bleSliceInterface, connectDeviceByIdParams, keybotCommandParams, manualMotorControlParams, motorTimeoutCommandParams, toBLEDeviceVM } from './bleSlice.contracts';
 
 const bleManager = new BleManager();
 let device: Device;
@@ -312,7 +312,9 @@ export const subscribeToEvents = createAsyncThunk('ble/subscribeToEvents', async
                 return;
             }
             else {
-                let status = Buffer.from(characteristic?.value!, 'base64').toString('ascii');
+                let buffer = Buffer.from(characteristic?.value!, 'base64')
+                let status = buffer.readFloatLE(0);
+
                 console.log("midSensorsStatus: " + status);
                 thunkAPI.dispatch(updateMidSensorsStatus({ status: status }));
             }
@@ -323,7 +325,8 @@ export const subscribeToEvents = createAsyncThunk('ble/subscribeToEvents', async
                 console.log("midSensorsStatus Characteristic not found");
                 return;
             }
-            let status = Buffer.from(characteristic.value!, 'base64').toString('ascii');
+            let buffer = Buffer.from(characteristic.value!, 'base64')
+            let status = buffer.readFloatLE(0);
             console.log("midSensorsStatus: " + status);
             thunkAPI.dispatch(updateMidSensorsStatus({ status: status }));
         }).catch((error) => {
@@ -554,7 +557,7 @@ const initialState: bleSliceInterface = {
     connectedDevice: null,
     logs: [],
     sensorStatus: { status: SensorState.PENDING, error: '' },
-    midSensorsStatus: { sensor_1_status: MidSensorState.PENDING, sensor_2_status: MidSensorState.PENDING, error: '' },
+    midSensorsStatus: { sensor_voltage: 0, error: '' },
     keyBotState: { status: KeyBotState.KEYBOT_STATE_IDLE, error: '', text: '' },
     batteryLevel: { level: 0.0, text: 'waiting' },
 };
@@ -632,30 +635,34 @@ const bleSlice = createSlice({
         },
         updateMidSensorsStatus(state, action) {
             const { status } = action.payload;
-            switch (status) {
-                case "0":
-                    // both sensors are released
-                    state.midSensorsStatus.sensor_1_status = MidSensorState.RELEASED;
-                    state.midSensorsStatus.sensor_2_status = MidSensorState.RELEASED;
-                    break;
-                case "1":
-                    // sensor 1 is pressed
-                    state.midSensorsStatus.sensor_1_status = MidSensorState.PRESSED;
-                    state.midSensorsStatus.sensor_2_status = MidSensorState.RELEASED;
-                    break;
-                case "2":
-                    // sensor 2 is pressed
-                    state.midSensorsStatus.sensor_1_status = MidSensorState.RELEASED;
-                    state.midSensorsStatus.sensor_2_status = MidSensorState.PRESSED;
-                    break;
-                case "3":
-                    // both sensors are pressed
-                    state.midSensorsStatus.sensor_1_status = MidSensorState.PRESSED;
-                    state.midSensorsStatus.sensor_2_status = MidSensorState.PRESSED;
-                    break;
-                default:
-                    console.warn(`Invalid status: ${status}`);
-            }
+            console.log("updateMidSensorsStatus", status);
+
+            state.midSensorsStatus = { sensor_voltage: status, error: '' };
+
+            // switch (status) {
+            //     case "0":
+            //         // both sensors are released
+            //         state.midSensorsStatus.sensor_1_status = MidSensorState.RELEASED;
+            //         state.midSensorsStatus.sensor_2_status = MidSensorState.RELEASED;
+            //         break;
+            //     case "1":
+            //         // sensor 1 is pressed
+            //         state.midSensorsStatus.sensor_1_status = MidSensorState.PRESSED;
+            //         state.midSensorsStatus.sensor_2_status = MidSensorState.RELEASED;
+            //         break;
+            //     case "2":
+            //         // sensor 2 is pressed
+            //         state.midSensorsStatus.sensor_1_status = MidSensorState.RELEASED;
+            //         state.midSensorsStatus.sensor_2_status = MidSensorState.PRESSED;
+            //         break;
+            //     case "3":
+            //         // both sensors are pressed
+            //         state.midSensorsStatus.sensor_1_status = MidSensorState.PRESSED;
+            //         state.midSensorsStatus.sensor_2_status = MidSensorState.PRESSED;
+            //         break;
+            //     default:
+            //         console.warn(`Invalid status: ${status}`);
+            // }
         },
         updateKeyBotState(state, action) {
             const { status } = action.payload;
@@ -720,9 +727,15 @@ const bleSlice = createSlice({
 
                     break;
 
-                case KeyBotState.KEYBOT_STATE_GOING_OVER_MID:
-                    state.keyBotState = { status: KeyBotState.KEYBOT_STATE_GOING_OVER_MID, error: '', text: "KEYBOT_STATE_GOING_OVER_MID" };
+                case KeyBotState.KEYBOT_STATE_BATTERY_CHARGED:
+                    state.keyBotState = { status: KeyBotState.KEYBOT_STATE_BATTERY_CHARGED, error: '', text: "KEYBOT_STATE_BATTERY_CHARGED" };
                     break;
+                case KeyBotState.KEYBOT_STATE_BATTERY_CHARGING:
+                    state.keyBotState = { status: KeyBotState.KEYBOT_STATE_BATTERY_CHARGING, error: '', text: "KEYBOT_STATE_BATTERY_CHARGING" };
+                    break;
+
+                case KeyBotState.KEYBOT_STATE_BATTERY_ERROR:
+                    state.keyBotState = { status: KeyBotState.KEYBOT_STATE_BATTERY_ERROR, error: '', text: "KEYBOT_STATE_BATTERY_ERROR" };
 
 
                 default:

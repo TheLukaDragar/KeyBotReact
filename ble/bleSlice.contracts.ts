@@ -1,11 +1,11 @@
 import * as Location from 'expo-location';
 
 export enum NetworkState {
-    PENDING="PENDING",
-    LOADING="LOADING",
-    SUCCESS="SUCCESS",
-    ERROR="ERROR",
-    CANCELED="CANCELED"
+    PENDING = "PENDING",
+    LOADING = "LOADING",
+    SUCCESS = "SUCCESS",
+    ERROR = "ERROR",
+    CANCELED = "CANCELED"
 }
 export enum ConnectionState {
     DISCONNECTED = "connect",
@@ -22,33 +22,33 @@ export enum ConnectionState {
     SUBSCRIBING_TO_EVENTS = "SUBSCRIBING_TO_EVENTS"
 }
 export enum SensorState {
-    SENSOR_OK="OK",
-    SENSOR_ERROR="ERROR",
-  PENDING="PENDING"
+    SENSOR_OK = "OK",
+    SENSOR_ERROR = "ERROR",
+    PENDING = "PENDING"
 }
 
 export enum MidSensorState {
-   PENDING="PENDING",
-   PRESSED="1",
-   RELEASED="0"
+    PENDING = "PENDING",
+    PRESSED = "1",
+    RELEASED = "0"
 }
 
 export enum ManualMotorControlCommand {
 
-    MOTOR1_FORWARD='0',
-    MOTOR1_BACKWARD= '1',
-    MOTOR2_FORWARD= '2',
-    MOTOR2_BACKWARD= '3'
+    MOTOR1_FORWARD = '0',
+    MOTOR1_BACKWARD = '1',
+    MOTOR2_FORWARD = '2',
+    MOTOR2_BACKWARD = '3'
 }
 
-export enum KeyBotCommand{
+export enum KeyBotCommand {
     KEYBOT_PRESS_LEFT = '0',
     KEYBOT_PRESS_RIGHT = '1',
     KEYBOT_EMERGENCY_STOP = '2',
     KEYBOT_CENTER = '3',
 }
 
-export enum MotorTimeoutCommand{
+export enum MotorTimeoutCommand {
     MOTOR_TIMEOUT_INCREASE = '0',
     MOTOR_TIMEOUT_DECREASE = '1',
     MOTOR_TIMEOUT_RESET = '2',
@@ -68,11 +68,13 @@ export enum KeyBotState {
     KEYBOT_STATE_EMERGENCY_RESET = '9',
     KEYBOT_STATE_CENTERING = ':',
     KEYBOT_ERROR_CENTERING = ';',
-    KEYBOT_STATE_GOING_OVER_MID= '<',
+    KEYBOT_STATE_BATTERY_CHARGING = '<',
+    KEYBOT_STATE_BATTERY_CHARGED = '=',
+    KEYBOT_STATE_BATTERY_ERROR = '>',
 
-  };
+};
 
-    
+
 export interface IBLEDevice {
     serviceUUIDs: Array<string>;
     isConnectable: boolean;
@@ -90,7 +92,7 @@ export interface IBLEDevice {
 }
 
 export const toBLEDeviceVM = (device: any) => {
-    console.log('toBLEDeviceVM',JSON.stringify(device));
+    console.log('toBLEDeviceVM', JSON.stringify(device));
     const result = {
         serviceUUIDs: device.serviceUUIDs,
         isConnectable: device.isConnectable,
@@ -125,8 +127,9 @@ export interface SensorStatus {
 }
 
 export interface MidSensorsStatus {
-    sensor_1_status: MidSensorState;
-    sensor_2_status: MidSensorState;
+    // sensor_1_status: MidSensorState;
+    // sensor_2_status: MidSensorState;
+    sensor_voltage: number;
     error: string;
 }
 
@@ -164,9 +167,9 @@ export interface motorTimeoutCommandParams {
 
 
 export type IAdapterState =
-/**
- * The current state of the manager is unknown; an update is imminent.
- */
+    /**
+     * The current state of the manager is unknown; an update is imminent.
+     */
     | 'Unknown'
     /**
      * The connection with the system service was momentarily lost; an update is imminent.

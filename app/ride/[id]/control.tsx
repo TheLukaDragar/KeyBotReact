@@ -324,7 +324,7 @@ export default function TabOneScreen({ navigation }: RootTabScreenProps<'TabOne'
 
       {/* <Text>S1: {ble.midSensorsStatus.sensor_1_status}</Text> */}
       <View style={{ flexDirection: 'row' }}>
-      <Text>S2: {ble.midSensorsStatus.sensor_2_status} </Text>
+      <Text>S2: {ble.midSensorsStatus.sensor_voltage} </Text>
       <Text>Battery {ble.batteryLevel.text}</Text>
       </View>
       <View style={{ flexDirection: 'row' }}>
