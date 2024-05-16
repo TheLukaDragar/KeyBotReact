@@ -451,8 +451,10 @@ export const keyBotCommand = createAsyncThunk('ble/keyBotCommand', async (params
     //00002a3d-0000-1000-8000-00805f9b34f3
     const command = params.command;
 
+    console.log("keyBotCommand: " + command);
+
     if (isDemoDevice) {
-        console.log("keyBotCommand: " + command);
+       
         if (command == KeyBotCommand.KEYBOT_PRESS_LEFT) {
             thunkAPI.dispatch(updateKeyBotState({ status: KeyBotState.KEYBOT_PRESSING_LEFT }));
             //run the timer

@@ -29,7 +29,6 @@ export default function StartRide() {
   const ble = useAppSelector((state) => state.ble);
 
 
-  const [switchUnlockDirection, setSwitchUnlockDirection] = useState(false);
 
   const [keySensed, setKeySensed] = useState(false);
 
@@ -63,7 +62,7 @@ export default function StartRide() {
           keybotRef.onSnapshot(docSnapshot => {
             const keybotData = { id: docSnapshot.id, ...docSnapshot.data() };
             setKeyBot(keybotData);
-            setSwitchUnlockDirection(keybotData.unlockDirection || false);
+           
           });
         } catch (error) {
           console.error("Error fetching keybot: ", error);
@@ -145,15 +144,15 @@ export default function StartRide() {
     } catch (err) {
       console.error("Error connecting to the keybot: ", err);
       setStatusMessage("Failed to connect to the keybot.");
-      // Toast.show(getErrorMessage(err), {
-      //   duration: Toast.durations.LONG,
-      //   position: Toast.positions.BOTTOM,
-      //   shadow: true,
-      //   animation: true,
-      //   hideOnPress: true,
-      //   delay: 0,
-      //   backgroundColor: theme.colors.error,
-      // });
+      Toast.show(getErrorMessage(err), {
+        duration: Toast.durations.LONG,
+        position: Toast.positions.BOTTOM,
+        shadow: true,
+        animation: true,
+        hideOnPress: true,
+        delay: 0,
+        backgroundColor: theme.colors.error,
+      });
     }
   }
 
@@ -169,8 +168,9 @@ export default function StartRide() {
   }
 
 
-  function unlockCar() {
+  function unlockCar(switchUnlockDirection = false) {
     setStatusMessage("Unlocking the car...");
+    console.log("unlocking the car switchUnlockDirection", switchUnlockDirection);
     setKeySensed(false);
     if (switchUnlockDirection) {
       dispatch(keyBotCommand({ command: KeyBotCommand.KEYBOT_PRESS_LEFT }));
@@ -227,7 +227,7 @@ export default function StartRide() {
 
         //unlock car if keybot is connected and keybot state is idle
 
-        unlockCar();
+        unlockCar(KeyBot.unlockDirection || false);
 
 
       }
@@ -382,7 +382,7 @@ export default function StartRide() {
 
 
                   <TouchableOpacity onPress={() => {
-                    unlockCar();
+                    unlockCar(KeyBot.unlockDirection || false);
                   }
                   }>
                     <Paragraph style={{ margin: 20, color: theme.colors.primary }}>

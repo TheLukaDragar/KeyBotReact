@@ -7,11 +7,10 @@ import { useEffect, useState } from 'react';
 import { StyleSheet, TouchableOpacity } from 'react-native';
 import { ActivityIndicator, Button, Paragraph, Title, useTheme } from 'react-native-paper';
 import Animated, { FadeIn, FadeInUp } from 'react-native-reanimated';
-import Toast from 'react-native-root-toast';
 import { authenticate, connectDeviceById, disconnectDevice, getChallenge, keyBotCommand, subscribeToEvents } from '../../../ble/bleSlice';
 import { ConnectionState, KeyBotCommand, KeyBotState } from '../../../ble/bleSlice.contracts';
 import { View } from '../../../components/Themed';
-import { getErrorMessage, isErrorWithMessage } from '../../../data/api';
+import { isErrorWithMessage } from '../../../data/api';
 import { useAppDispatch, useAppSelector } from '../../../data/hooks';
 import { getLocation } from '../../../utils/getlocation';
 
@@ -29,7 +28,6 @@ export default function EndRide() {
   const ble = useAppSelector((state) => state.ble);
 
 
-  const [switchUnlockDirection, setSwitchUnlockDirection] = useState(false);
 
 
 
@@ -63,7 +61,6 @@ export default function EndRide() {
           keybotRef.onSnapshot(docSnapshot => {
             const keybotData = { id: docSnapshot.id, ...docSnapshot.data() };
             setKeyBot(keybotData);
-            setSwitchUnlockDirection(keybotData.unlockDirection || false);
           });
         } catch (error) {
           console.error("Error fetching keybot: ", error);
@@ -170,8 +167,10 @@ export default function EndRide() {
   }
 
 
-  function lockCar() {
+  function lockCar(switchUnlockDirection = false) {
     setStatusMessage("Locking the car...");
+    console.log("Locking the car switchUnlockDirection", switchUnlockDirection);
+
     if (switchUnlockDirection) {
       dispatch(keyBotCommand({ command: KeyBotCommand.KEYBOT_PRESS_RIGHT }));
       console.log("pressing left");
@@ -201,8 +200,7 @@ export default function EndRide() {
 
         //unlock car if keybot is connected and keybot state is idle
 
-        lockCar();
-
+        lockCar(KeyBot.unlockDirection || false);
 
       }
     }
@@ -340,7 +338,7 @@ export default function EndRide() {
 
 
                 <TouchableOpacity onPress={() => {
-                  lockCar();
+                  lockCar(KeyBot.unlockDirection || false);
                 }
                 }>
                   <Paragraph style={{ margin: 20, color: theme.colors.primary }}>

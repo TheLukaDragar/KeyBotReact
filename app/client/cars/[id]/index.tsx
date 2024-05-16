@@ -1,3 +1,4 @@
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import database from '@react-native-firebase/database';
 import firestore from '@react-native-firebase/firestore';
 import CryptoES from 'crypto-es';
@@ -8,16 +9,16 @@ import { useLocalSearchParams, useNavigation, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Image, ScrollView, StyleSheet } from 'react-native';
 import MapView, { Marker } from 'react-native-maps';
-import { Avatar, Button, Divider, IconButton, Title, useTheme } from 'react-native-paper';
+import { Button, Divider, IconButton, Title, useTheme } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../../../../auth/provider';
 import { authenticate, connectDeviceById, getChallenge, subscribeToEvents } from '../../../../ble/bleSlice';
+import { ConnectionState } from '../../../../ble/bleSlice.contracts';
 import { Text, View, getTheme } from '../../../../components/Themed';
 import { getErrorMessage } from '../../../../data/api';
 import { useAppDispatch, useAppSelector } from '../../../../data/hooks';
 import { getLocation } from '../../../../utils/getlocation';
 import React = require('react');
-import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 
 
 export default function KeyBotDetails() {
@@ -65,6 +66,8 @@ export default function KeyBotDetails() {
   const { user } = useAuth();
 
   const [isLoading, setLoading] = useState(false);
+
+  const [rideKey, setRideKey] = useState("");
 
 
   const [favouriteCars, setFavouriteCars] = useState<any[]>([]);
@@ -128,7 +131,7 @@ export default function KeyBotDetails() {
 
     } catch (err) {
       //do nothing for now 
-      console.log(err);
+      console.log("Car precconection error", err);
 
     }
 
@@ -349,8 +352,8 @@ export default function KeyBotDetails() {
           fleetId: fleetId,
           startLocation: {
             latitude: car_loc.latitude,
-             //location.coords.latitude,
-            longitude:  car_loc.longitude,
+            //location.coords.latitude,
+            longitude: car_loc.longitude,
             //location.coords.longitude,
           },
           endLocation: {
@@ -358,7 +361,7 @@ export default function KeyBotDetails() {
             longitude: 0,
           },
           currentLocation: {
-            latitude:  car_loc.latitude,
+            latitude: car_loc.latitude,
             //location.coords.latitude,
             longitude: car_loc.longitude,
             // location.coords.longitude,
@@ -390,20 +393,11 @@ export default function KeyBotDetails() {
 
           });
 
-          setLoading(false);
+          
 
+          setRideKey(rideRef.key || "");
 
-          //open start ride page
-          router.replace("ride/" + rideRef.key + "/start");
-
-
-
-
-
-
-
-
-
+          console.log("Ride created and car is now in use!", rideRef.key);
 
 
         } else {
@@ -419,13 +413,29 @@ export default function KeyBotDetails() {
     }
   };
 
+  useEffect(() => {
+    if (rideKey !== "" && (ble.deviceConnectionState.status === ConnectionState.READY || ble.deviceConnectionState.status === ConnectionState.ERROR || ble.deviceConnectionState.status === ConnectionState.DISCONNECTED)) {
+      console.log("Routing to ride start page " + rideKey);
+      setLoading(false);
+      router.push(`/ride/${rideKey}/start`);
+      //clear ride key
+      setRideKey("");
+      
+    }
+    else {
+      console.log("waiting for device connect to the end");
+    }
+  }
+
+    , [rideKey, ble.deviceConnectionState.status]);
+
 
   function StatusIcon({ status }: { status: string }) {
     let iconName = "" as "sync" | "circle" | "alert-circle";
     let iconColor = "";
 
     //searching,connecting,authenticated,ready,disconnected
-  
+
     if (status === "searching" || status === "connecting" || status === "authenticating") {
       iconName = "sync";
       iconColor = "#FFFF33";  // Electric Yellow
@@ -436,8 +446,8 @@ export default function KeyBotDetails() {
       iconName = "alert-circle";
       iconColor = "#FF0033";  // Electric Red
     }
-  
-  
+
+
     return <MaterialCommunityIcons name={iconName} color={iconColor} size={12} style={{ marginRight: 40, paddingBottom: 12 }} />;
   }
 
@@ -478,11 +488,11 @@ export default function KeyBotDetails() {
 
           {
             Car?.imageURL ? (
-              <><Image source={{ uri: Car.imageURL }} style={styles.image} /><View style={{ position: 'absolute', top:0, left:0, backgroundColor: 'transparent', borderRadius: 10, marginTop:30,marginLeft:10}}>
+              <><Image source={{ uri: Car.imageURL }} style={styles.image} /><View style={{ position: 'absolute', top: 0, left: 0, backgroundColor: 'transparent', borderRadius: 10, marginTop: 30, marginLeft: 10 }}>
                 <StatusIcon status={ble.deviceConnectionState.status} />
               </View></>
 
-              
+
             ) : (
               <Text>No image uploaded</Text>
             )
@@ -578,7 +588,7 @@ export default function KeyBotDetails() {
 
 
           </Text>
-         
+
 
         </View>
 
