@@ -227,7 +227,7 @@ export default function EndRide() {
     }
   }
 
-  const endRide = async () => {
+  const endRide = async (ride: any) => {
     try {
       //set the realtime properties
       let rideRef = database().ref('Rides').child(String(params.id));
@@ -286,7 +286,7 @@ export default function EndRide() {
 
         <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
 
-          {(isLoading) || (ble.deviceConnectionState.status !== ConnectionState.READY && ble.deviceConnectionState.status !== ConnectionState.ERROR) || (ble.keyBotState.status === KeyBotState.KEYBOT_PRESSING_LEFT || ble.keyBotState.status === KeyBotState.KEYBOT_PRESSING_RIGHT) && (
+          {(!ride) || (isLoading) || (ble.deviceConnectionState.status !== ConnectionState.READY && ble.deviceConnectionState.status !== ConnectionState.ERROR) || (ble.keyBotState.status === KeyBotState.KEYBOT_PRESSING_LEFT || ble.keyBotState.status === KeyBotState.KEYBOT_PRESSING_RIGHT) && (
 
             <><ActivityIndicator size='large' /></>
 
@@ -301,7 +301,7 @@ export default function EndRide() {
           {(ble.deviceConnectionState.status === ConnectionState.ERROR) && (
             <><TouchableOpacity onPress={() => {
               BleConnect(KeyBot);
-              endRide();
+              endRide(ride);
             }
             }>
               <Paragraph style={{ margin: 20, color: theme.colors.primary }}>
@@ -358,7 +358,7 @@ export default function EndRide() {
                 icon="check"
 
                 onPress={() => {
-                  endRide();
+                  endRide(ride);
 
                   router.replace("/client/");
 
