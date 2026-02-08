@@ -1,8 +1,8 @@
 import firestore from '@react-native-firebase/firestore';
 import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { FlatList, StyleSheet } from 'react-native';
-import { ActivityIndicator, Avatar, Button, Card, Divider, Modal, Paragraph, Portal, Searchbar, TextInput, Title } from 'react-native-paper';
+import { StyleSheet } from 'react-native';
+import { ActivityIndicator, Avatar, Button, Card, Modal, Paragraph, Portal, TextInput, Title } from 'react-native-paper';
 import { useAuth } from '../../../auth/provider';
 import { View, getTheme } from '../../../components/Themed';
 
@@ -11,7 +11,7 @@ import * as Location from 'expo-location';
 import { LocationObject } from 'expo-location';
 import React from 'react';
 import MapView, { Callout, Marker } from 'react-native-maps';
-import Animated, { FadeIn, FadeInDown, FadeInUp } from 'react-native-reanimated';
+import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { requestPermissionsExport } from '../../../ble/bleSlice';
 
@@ -85,74 +85,74 @@ export default function CarsInfiniteScroll() {
         console.log("Fewer cars than page size, no more data available");
         setMoreDataAvailable(false);
       }    //set lastVisible for the next pagination
-    setLastVisible(snapshot.docs[snapshot.docs.length - 1]);
-    console.log("set lastVisible", snapshot.docs[snapshot.docs.length - 1].data().model);
+      setLastVisible(snapshot.docs[snapshot.docs.length - 1]);
+      console.log("set lastVisible", snapshot.docs[snapshot.docs.length - 1].data().model);
 
 
-    const carss = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      const carss = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
-    //check if there is a car that has the current user as the current_userId
-    //if there is set that car as the selected car
+      //check if there is a car that has the current user as the current_userId
+      //if there is set that car as the selected car
 
-    const _inUseCar = carss.find(car => car.current_userId === user.uid);
-    console.log("curent user car", selectedCar);
-
-
-
-    let sortedCars = carss;
-
-    //get favourite cars
-    const userRef = firestore().collection('Users').doc(user.uid);
-    const userDoc = await userRef.get();
-    const userFavouriteCars = userDoc.data().favourite_cars;
-
-    //check if there are any favourite cars and if there are sort them to the top
-    console.log("favouriteCarssss", userFavouriteCars);
-    if (userFavouriteCars && userFavouriteCars.length > 0) {
-      //sort so that the selected car is first
-      console.log("favouriteCars", userFavouriteCars);
-      console.log("carss ids", carss.map(car => car.id));
-
-      let reorderedCars = carss.sort((a, b) => {
-        // Check if car 'a' is in the favouriteCars array
-        const aIsFavourite = userFavouriteCars.includes(a.id);
-        // Check if car 'b' is in the favouriteCars array
-        const bIsFavourite = userFavouriteCars.includes(b.id);
-
-        if (aIsFavourite && !bIsFavourite) {
-          // If car 'a' is a favourite and car 'b' is not, place 'a' before 'b'
-          return -1;
-        } else if (!aIsFavourite && bIsFavourite) {
-          // If car 'b' is a favourite and car 'a' is not, place 'b' before 'a'
-          return 1;
-        } else {
-          // If both cars are favourites or both cars are not favourites, don't change their order
-          return 0;
-        }
-      });
-
-      sortedCars = reorderedCars;
+      const _inUseCar = carss.find(car => car.current_userId === user.uid);
+      console.log("curent user car", selectedCar);
 
 
 
+      let sortedCars = carss;
 
-    }
-    if (_inUseCar) {
-      setInUseCar(_inUseCar);
-      //sort so that the selected car is first
+      //get favourite cars
+      const userRef = firestore().collection('Users').doc(user.uid);
+      const userDoc = await userRef.get();
+      const userFavouriteCars = userDoc.data().favourite_cars;
 
-      const reorderedCars = sortedCars.filter(car => car.id !== _inUseCar.id);
-      reorderedCars.unshift(_inUseCar);
-      sortedCars = reorderedCars;
+      //check if there are any favourite cars and if there are sort them to the top
+      console.log("favouriteCarssss", userFavouriteCars);
+      if (userFavouriteCars && userFavouriteCars.length > 0) {
+        //sort so that the selected car is first
+        console.log("favouriteCars", userFavouriteCars);
+        console.log("carss ids", carss.map(car => car.id));
 
-    }
-    else {
-      setInUseCar(null);
-    }
+        let reorderedCars = carss.sort((a, b) => {
+          // Check if car 'a' is in the favouriteCars array
+          const aIsFavourite = userFavouriteCars.includes(a.id);
+          // Check if car 'b' is in the favouriteCars array
+          const bIsFavourite = userFavouriteCars.includes(b.id);
+
+          if (aIsFavourite && !bIsFavourite) {
+            // If car 'a' is a favourite and car 'b' is not, place 'a' before 'b'
+            return -1;
+          } else if (!aIsFavourite && bIsFavourite) {
+            // If car 'b' is a favourite and car 'a' is not, place 'b' before 'a'
+            return 1;
+          } else {
+            // If both cars are favourites or both cars are not favourites, don't change their order
+            return 0;
+          }
+        });
+
+        sortedCars = reorderedCars;
+
+
+
+
+      }
+      if (_inUseCar) {
+        setInUseCar(_inUseCar);
+        //sort so that the selected car is first
+
+        const reorderedCars = sortedCars.filter(car => car.id !== _inUseCar.id);
+        reorderedCars.unshift(_inUseCar);
+        sortedCars = reorderedCars;
+
+      }
+      else {
+        setInUseCar(null);
+      }
 
       //add favourite property to cars
       sortedCars = sortedCars.map(car => {
-        if ( userFavouriteCars &&
+        if (userFavouriteCars &&
           userFavouriteCars.length > 0 &&
           userFavouriteCars.includes(car.id)) {
           return { ...car, favourite: true };
@@ -230,7 +230,7 @@ export default function CarsInfiniteScroll() {
           alert('Permission to access location was denied');
           return;
         }
-  
+
         let location = await getLocation(true)
         console.log("location refers", location);
         setLocation(location);
@@ -772,7 +772,7 @@ export default function CarsInfiniteScroll() {
                             const status = snapshot.val().status;
                             if (status === "Initialised") {
                               router.push("ride/" + inUseCar.current_rideId + "/start");
-                        
+
                             }
                             else if (status === "In progress") {
                               router.push("ride/" + inUseCar.current_rideId + "/progress");
@@ -787,7 +787,7 @@ export default function CarsInfiniteScroll() {
 
 
 
-                  
+
 
 
                         // router.push("ride/" + item.current_rideId + "/progress");
@@ -917,7 +917,7 @@ const styles = StyleSheet.create({
     marginLeft: 16,
     marginTop: 16,
     flex: 0,
-   
+
   },
   textContainer: {
     flex: 1, // Take up remaining space

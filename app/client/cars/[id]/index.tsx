@@ -286,12 +286,12 @@ export default function KeyBotDetails() {
     console.log("rideCar", car);
     try {
       const carRef = firestore().collection('Cars').doc(car.id);
-      
+
       // Increase timeout for the transaction
       const timeoutPromise = new Promise((_, reject) =>
         setTimeout(() => reject(new Error('Operation timeout')), 30000) // 30 second timeout
       );
-      
+
       const transactionPromise = firestore().runTransaction(async transaction => {
         const carDoc = await transaction.get(carRef);
         if (!carDoc.exists) {
@@ -399,7 +399,7 @@ export default function KeyBotDetails() {
 
           });
 
-          
+
 
           setRideKey(rideRef.key || "");
 
@@ -415,11 +415,11 @@ export default function KeyBotDetails() {
 
       // Use Promise.race to handle timeout gracefully
       await Promise.race([transactionPromise, timeoutPromise]);
-      
+
     } catch (e) {
       setLoading(false);
       console.log("Booking error:", e);
-      
+
       // Check if it's just a timeout but operation succeeded
       if (e?.code === 'firestore/deadline-exceeded') {
         console.log("Timeout error - but booking may have succeeded");
@@ -438,7 +438,7 @@ export default function KeyBotDetails() {
       router.push(`/ride/${rideKey}/start`);
       //clear ride key
       setRideKey("");
-      
+
     }
     else {
       console.log("waiting for device connect to the end");
