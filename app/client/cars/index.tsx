@@ -45,43 +45,46 @@ export default function CarsInfiniteScroll() {
 
   const fetchCars = async (startAfter) => {
     console.log("fetching cars");
-    let query = firestore()
-      .collection('Cars')
-      // .orderBy('model')
-      .limit(PAGE_SIZE)
+    try {
+      let query = firestore()
+        .collection('Cars')
+        // .orderBy('model')
+        .limit(PAGE_SIZE)
 
-    if (startAfter) {
-      console.log("startingAfter", startAfter.data().model);
-      query = query.startAfter(startAfter);
-    }
+      if (startAfter) {
+        console.log("startingAfter", startAfter.data().model);
+        query = query.startAfter(startAfter);
+      }
 
-    const granted = await new Promise(resolve => requestPermissionsExport(resolve));
-    if (!granted) {
-      throw new Error('Ble permission not granted');
-    }
-    let { status } = await Location.requestForegroundPermissionsAsync();
-    if (status !== 'granted') {
-      alert('Permission to access location was denied');
-      return;
-    }
+      console.log("Requesting BLE permissions...");
+      const granted = await new Promise(resolve => requestPermissionsExport(resolve));
+      if (!granted) {
+        throw new Error('Ble permission not granted');
+      }
+      console.log("BLE permissions granted");
 
-    
+      console.log("Requesting location permissions...");
+      let { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        alert('Permission to access location was denied');
+        return;
+      }
+      console.log("Location permissions granted");
 
+      console.log("Executing Firebase query...");
+      const snapshot = await query.get();
+      console.log("Firebase query completed - snapshot docs:", snapshot.docs.length);
 
-    const snapshot = await query.get();
-    console.log("snapshot", snapshot.docs.length);
+      if (!snapshot.docs.length) {
+        console.log("No cars found in Firebase");
+        setMoreDataAvailable(false);
+        return [];
+      }
 
-    if (!snapshot.docs.length) {
-      setMoreDataAvailable(false);
-      return [];
-    }
-
-    if (snapshot.docs.length < PAGE_SIZE) {
-      setMoreDataAvailable(false);
-
-    }
-
-    //set lastVisible for the next pagination
+      if (snapshot.docs.length < PAGE_SIZE) {
+        console.log("Fewer cars than page size, no more data available");
+        setMoreDataAvailable(false);
+      }    //set lastVisible for the next pagination
     setLastVisible(snapshot.docs[snapshot.docs.length - 1]);
     console.log("set lastVisible", snapshot.docs[snapshot.docs.length - 1].data().model);
 
@@ -147,27 +150,26 @@ export default function CarsInfiniteScroll() {
       setInUseCar(null);
     }
 
-    //add favourite property to cars
-    sortedCars = sortedCars.map(car => {
-      if ( userFavouriteCars &&
-        userFavouriteCars.length > 0 &&
-        userFavouriteCars.includes(car.id)) {
-        return { ...car, favourite: true };
-      }
-      else {
-        return { ...car, favourite: false };
-      }
-    });
+      //add favourite property to cars
+      sortedCars = sortedCars.map(car => {
+        if ( userFavouriteCars &&
+          userFavouriteCars.length > 0 &&
+          userFavouriteCars.includes(car.id)) {
+          return { ...car, favourite: true };
+        }
+        else {
+          return { ...car, favourite: false };
+        }
+      });
 
+      console.log("fetchCars returning:", sortedCars.length, "cars");
+      return sortedCars;
 
-    return sortedCars;
-
-
-
-
-
-
-
+    } catch (error) {
+      console.error("fetchCars error:", error);
+      setError(error.message);
+      throw error;
+    }
   };
 
   //use effect for location
@@ -244,21 +246,17 @@ export default function CarsInfiniteScroll() {
 
   const fetchInitialCars = async () => {
     // This function only fetches the initial set of cars
-
-
-
-
-
-    const newCars = await fetchCars();
-
-
-
-
-
-
-    // console.log(newCars);
-    setCars(newCars);
-    console.log("fetchInitialCars", cars);
+    try {
+      console.log("Starting fetchInitialCars...");
+      const newCars = await fetchCars();
+      console.log("fetchInitialCars got cars:", newCars?.length || 0);
+      setCars(newCars);
+      console.log("fetchInitialCars completed");
+    } catch (error) {
+      console.error("fetchInitialCars error:", error);
+      setError(error.message);
+      alert("Error loading cars: " + error.message);
+    }
   };
 
   const [location, setLocation] = React.useState<LocationObject | null>(null);

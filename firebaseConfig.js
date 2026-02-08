@@ -12,6 +12,7 @@ import {
 const firebaseConfig = {
     apiKey: "AIzaSyAub1kscbCLLl-_lNirQvEEs50rkoaCYpU",
     authDomain: "dlmd-392218.firebaseapp.com",
+    databaseURL: "https://keybotreact-default-rtdb.europe-west1.firebasedatabase.app",
     projectId: "dlmd-392218",
     storageBucket: "dlmd-392218.appspot.com",
     messagingSenderId: "768327334147",

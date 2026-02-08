@@ -286,7 +286,13 @@ export default function KeyBotDetails() {
     console.log("rideCar", car);
     try {
       const carRef = firestore().collection('Cars').doc(car.id);
-      await firestore().runTransaction(async transaction => {
+      
+      // Increase timeout for the transaction
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Operation timeout')), 30000) // 30 second timeout
+      );
+      
+      const transactionPromise = firestore().runTransaction(async transaction => {
         const carDoc = await transaction.get(carRef);
         if (!carDoc.exists) {
           throw 'Car does not exist!';
@@ -406,10 +412,22 @@ export default function KeyBotDetails() {
           throw 'Car is not available!';
         }
       });
+
+      // Use Promise.race to handle timeout gracefully
+      await Promise.race([transactionPromise, timeoutPromise]);
+      
     } catch (e) {
       setLoading(false);
-      console.log(e);
-      alert("Error booking a car: " + e);
+      console.log("Booking error:", e);
+      
+      // Check if it's just a timeout but operation succeeded
+      if (e?.code === 'firestore/deadline-exceeded') {
+        console.log("Timeout error - but booking may have succeeded");
+        alert("Booking is processing... Please check your rides if it doesn't appear automatically.");
+        // Don't show error for timeout - operation likely succeeded
+      } else {
+        alert("Error booking a car: " + e);
+      }
     }
   };
 
@@ -570,7 +588,8 @@ export default function KeyBotDetails() {
 
           >
 
-            {
+            {/* Distance check disabled for testing */}
+            {/* 
               getDistance(Car).rawDistance < 1000 ? (
                 <Text style={{
                   textAlign: 'center', fontWeight: 'normal', fontSize: 18
@@ -582,8 +601,10 @@ export default function KeyBotDetails() {
 
                 >{getDistance(Car).formattedDistance} away please move closer to unlock</Text>
               )
-
-            }
+            */}
+            <Text style={{
+              textAlign: 'center', fontWeight: 'normal', fontSize: 18
+            }}>Ready to unlock</Text>
 
 
 

@@ -107,7 +107,7 @@ export default function TabLayout() {
           title: "Rides",
           tabBarIcon: ({ color }) => <TabBarIcon name="map" color={color} />,
           headerRight: () => (
-            
+
             <IconButton
           icon="logout"
           size={25}
@@ -115,53 +115,34 @@ export default function TabLayout() {
 
             signOut();
 
-          
+
           }}
         />
-  
-              
-              
-            
+
+
+
+
           ),
 
         }}
       />
 
-      {/* <Tabs.Screen
-        name="index"
-        // TODO: Type
-        
-        options={{
-
-          
-          
-          title: "Cars",
-          tabBarIcon: ({ color  }) => <TabBarIcon2 name="truck-fast" color={color} />,
-          headerRight: () => (
-            <Link href="/modal" asChild>
-              <Pressable>
-                {({ pressed }) => (
-                  <FontAwesome
-                    name="info-circle"
-                    size={25}
-                    color={Colors[colorScheme==="dark" ? "dark" : "light"].text}
-                    style={{ marginRight: 15, opacity: pressed ? 0.5 : 1 }}
-                  />
-                )}
-              </Pressable>
-            </Link>
-          ),
-          
-        }}
-      />
-       */}
-      {/* <Tabs.Screen
+      <Tabs.Screen
         name="keybot"
         options={{
-          title: "My Box",
-          tabBarIcon: ({ color }) => <TabBarIcon2 name="car-wireless" color={color} />,
+          title: "KeyBot",
+          tabBarIcon: ({ color }) => <TabBarIcon2 name="key-wireless" color={color} />,
+          headerRight: () => (
+            <IconButton
+              icon="logout"
+              size={25}
+              onPress={() => {
+                signOut();
+              }}
+            />
+          ),
         }}
-      /> */}
+      />
 
 
 
